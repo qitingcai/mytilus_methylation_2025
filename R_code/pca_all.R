@@ -6,13 +6,12 @@ library(dplyr)
 
 setwd("/hb/groups/kelley_lab/tina/mytilus/Rscripts/data/merged_cov/top5")
 
-targets <- read.delim("sample_full_top5_nobaseline.txt", row.names = "sample", stringsAsFactors = FALSE)
+meta_data <- read.delim("sample_full_top5_nobaseline.txt", row.names = "sample", stringsAsFactors = FALSE)
 
-meta<-targets %>%
+meta<-meta_data< %>%
   rownames_to_column(var = "sample_name")
-Sample <- row.names(targets)
+Sample <- row.names(meta_data<)
 
-meta_data<-read.delim("sample_full_top5_nobaseline.txt", row.names = "sample", stringsAsFactors = FALSE)
 
 files <- paste0(Sample,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
 yall <- readBismark2DGE(files, sample.names=Sample)
