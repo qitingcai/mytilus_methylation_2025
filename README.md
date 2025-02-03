@@ -2,8 +2,11 @@
 Code repository for mussel DNA methylation project
 
 
-# Contents
+## Contents
 
-## Code
+### Code
 
+#### 01_RRBS_Bismark_Pipeline: scripts used to preprocess raw RRBS reads and generate CpG methylation calls via the Bismark pipeline
+
+#### 02_Rcode: scripts used to run differential methylation analyses in R
 
