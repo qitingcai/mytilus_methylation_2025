@@ -17,7 +17,7 @@
 ### Aim of this script: concatenating lane 01-04 for both reverse and forward trimmed reads for all samples ###
 
 # Load the sample name based on the sample ID on the meta sample file 
-LINE=$(sed -n "${SAMPLE_ID}p" /hb/groups/kelley_lab/tina/mytilus/03_mapping/02_alignment/sample.txt)
+LINE=$(sed -n "${SLURM_ARRAY_TASK_ID}"p /hb/groups/kelley_lab/tina/mytilus/03_mapping/02_alignment/sample_final.txt)
 sample=$(echo ${LINE} | awk '{ print $2; }')
 
 # Define the input file path that includes all trimmed reads

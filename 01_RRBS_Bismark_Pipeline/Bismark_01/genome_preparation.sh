@@ -27,6 +27,9 @@
 # wget https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.4.2/bowtie2-2.4.2-sra-linux-x86_64.zip/download
 # unzip download
 
+wget https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.5.4/bowtie2-2.5.4-sra-linux-x86_64.zip
+
+
 #set path to find bismark, bowtie2 and folder that contained reference genome
 bismark_dir="/hb/groups/kelley_lab/tina/mytilus/Bismark-master"
 bowtie2_dir="/hb/groups/kelley_lab/tina/mytilus/bowtie2/bowtie2-2.4.2-sra-linux-x86_64/"

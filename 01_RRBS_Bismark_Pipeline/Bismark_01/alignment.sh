@@ -21,7 +21,7 @@ module load parallel miniconda3
 conda activate bismark
 
 ### Load meta file that contains sample name, tissue type, lane (all just L001 because they were concatenated), and strand (R1 or R2) ###
-LINE=$(sed -n "${SAMPLE_ID}"p /hb/groups/kelley_lab/tina/mytilus/03_mapping/02_alignment/sample_final.txt)
+LINE=$(sed -n "${SLURM_ARRAY_TASK_ID}"p /hb/groups/kelley_lab/tina/mytilus/03_mapping/02_alignment/sample_final.txt)
 sample=$(echo ${LINE} | awk '{ print $2; }')
 tissue=$(echo ${LINE} | awk '{ print $3; }')
 lane=$(echo ${LINE} | awk '{ print $4; }')
@@ -33,13 +33,17 @@ echo "running Bismark for sample: ${sample} (${tissue}, ${lane})"
 bowtie2_dir="/hb/groups/kelley_lab/tina/mytilus/bowtie2/bowtie2-2.4.2-sra-linux-x86_64" # this directory contains bowtie2
 genome_folder="/hb/groups/kelley_lab/tina/mytilus/ref_genome/GCF_021869535.1/" # this directoy contains both the unmodified genome (as .fa or .fasta files) as well as the two bisulfite genome subdirectories which were generated in the Bismark Genome Preparations step
 trimmed_dir="/hb/groups/kelley_lab/tina/mytilus/02_trim/final_trim0603/concat" # this directory contains the trimmed, concatenated reads for all samples
+bismark_dir="/hb/groups/kelley_lab/tina/mytilus/Bismark-master" 
 
 ### Create output directory based on tissue and sample ###
 mkdir -p final_map/${tissue}/${sample}
 cd final_map/${tissue}/${sample}
 
 ### Running paired-end alignment via Bismark ###
-bismark --p 4 ${genome_folder} \  #default is directional BS-seq libraries
---gzip -score_min L,0,-0.6 \  #relax default stringent setting from (L,0,-0.2)
--1 ${trimmed_dir}/${sample}_R1_merged.fq.gz \  #specify paired-end alignment
+#relax default stringent setting from (L,0,-0.2)
+#default is directional BS-seq libraries
+#specify paired-end alignment
+${bismark_dir}/bismark --p 4 ${genome_folder} \
+--gzip -score_min L,0,-0.6 \
+-1 ${trimmed_dir}/${sample}_R1_merged.fq.gz \
 -2 ${trimmed_dir}/${sample}_R2_merged.fq.gz
