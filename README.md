@@ -24,8 +24,8 @@ Code repository for mussel DNA methylation project
 │   │   │      ├── genome_download.sh
 │   │   │      ├── genome_preparation.sh
 │   │   │      ├── alignment.sh
-│   │   │      ├── merge_strand.sh
-│   │   └──    └── methy_extractor.sh
+│   │   │      ├── methy_extractor.sh
+│   │   └──    └── merge_strand.sh
 │   │  
 │   ├── 02_R_code
 │   │   ├── foot_DM_analysis.R
