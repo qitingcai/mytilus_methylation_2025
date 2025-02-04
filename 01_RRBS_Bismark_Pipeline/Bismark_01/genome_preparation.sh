@@ -13,6 +13,10 @@
 #SBATCH --error=slurm_%j.err             # Standard output and error log
 #SBATCH --no-requeue                     # don't requeue the job upon NODE_FAIL
 
+#### Aim of this script: 
+### Bisulfite convert reference genome Mytilus Californianus for downstream Bismark analyses ###
+
+######################### Setting up the environment #########################
 ### Code for downloading Bismark to home directory, --> containing version v0.24.2 ###
 # wget https://github.com/FelixKrueger/Bismark/archive/master.zip 
 # unzip master.zip
@@ -23,17 +27,15 @@
 # conda install bioconda::bismark 
 # conda activate bismark
 
-### Code for downloading Bowtie2 to home directory, --> containing version 2.4.2
-# wget https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.4.2/bowtie2-2.4.2-sra-linux-x86_64.zip/download
+### Code for downloading Bowtie2 to home directory, --> containing version 2.5.4 ###
+# wget https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.5.4/bowtie2-2.5.4-sra-linux-x86_64.zip
 # unzip download
 
-#add location to system PATH
-#export PATH=$HOME/tools/bowtie2/bowtie2-2.4.2-sra-linux-x86_64:$PATH
+################################################################################
 
-
-#set path to find bismark, bowtie2 and folder that contained reference genome
+# Set path to find bismark, bowtie2 and folder that contains the reference genome
 bismark_dir="/hb/groups/kelley_lab/tina/mytilus/Bismark-master"
-bowtie2_dir="/hb/groups/kelley_lab/tina/mytilus/bowtie2/bowtie2-2.4.2-sra-linux-x86_64/"
+bowtie2_dir="/hb/groups/kelley_lab/tina/mytilus/bowtie2/bowtie2-2.5.4-sra-linux-x86_64/"
 genome_folder="/hb/groups/kelley_lab/tina/mytilus/ref_genome/GCF_021869535.1/"
 
 ### Running Bismark genome preparation step ###

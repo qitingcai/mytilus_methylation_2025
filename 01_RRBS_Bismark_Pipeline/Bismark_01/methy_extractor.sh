@@ -13,26 +13,32 @@
 #SBATCH --error=slurm_%j.err             # Standard output and error log
 #SBATCH --no-requeue                     # don't requeue the job upon NODE_FAIL
 
+#### Aim of this script: 
+### Extract methylation calls for every single C analyzed ###
+
+### NOTE: Samtools is needed to run methlation extractor ###
 export PATH="$PATH:/hb/groups/kelley_lab/tina/mytilus/04_methylation_extractor/samtools-1.9"
 
+### Path to directories that contain Bismark and mapping output ###
 bismark_dir="/hb/groups/kelley_lab/tina/mytilus/Bismark-master"
 map_dir="/hb/groups/kelley_lab/tina/mytilus/03_mapping/02_alignment/final_map0603/final_map_min0.6/F"
 
-# replace the path with Gill sample subset
+### Replace the path to include Gill sample subset ###
 # map_dir="/hb/groups/kelley_lab/tina/mytilus/03_mapping/02_alignment/final_map0603/final_map/G"
 
-# Load necessary modules
-module load bismark
+### Load necessary modules ###
+module load miniconda3
+conda activate bismark
 
-# Define the BAM files to process
+### Define all the BAM files to be processed from the mapping directories ###
 bam_files=$(ls ${map_dir}/*/*.bam)
 
 ### Run Bismark methylation extractor ###
 
-#the output of the methylation extractor can be transformed into a bedGraph and coverage file using the option --bedGraph (see also --counts)
-# Context-dependent methylation output files (--comprehensive option) This will default to three output files (CpG-context, CHG-context and CHH-context)
-# for paired-end reads --no_overlap (on by default): specifying this option will extract the methylation calls of overlapping parts in the middle of paired-end reads only once (using the calls from the first read which is presumably the one with a lowest error rate).
-#-buffer_size <string> This allows you to specify the main memory sort buffer when sorting the methylation information
+# 1. The outputs are transformed into bedGraph files using the option --bedGraph & output Methylated and Unmethylated calls for every cytosine in the genome using --counts
+# 2. Context-dependent methylation output files (--comprehensive option). Default to three output files (CpG-context, CHG-context and CHH-context)
+# 3. For paired-end reads --no_overlap (on by default): extract the methylation calls of overlapping parts in the middle of paired-end reads only once (using the calls from the first read which is presumably the one with a lowest error rate).
+# 4. --buffer_size 75% : This option sets the buffer size for reading in BAM files to 75% of the available system memory.
 
 ${bismark_dir}/bismark_methylation_extractor --bedGraph --counts -p --comprehensive --no_overlap --multicore 28 --buffer_size 75% \
 --gzip -o /hb/groups/kelley_lab/tina/mytilus/04_methylation_extractor/final_minscore0.6 ${bam_files}

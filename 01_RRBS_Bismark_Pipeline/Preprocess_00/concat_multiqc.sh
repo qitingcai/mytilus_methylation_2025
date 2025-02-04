@@ -13,7 +13,6 @@
 #SBATCH --error=slurm_%j.err             # Standard output and error log
 #SBATCH --no-requeue                     # don't requeue the job upon NODE_FAIL
 
-
 ### Directory that contain all fastqc results on trimmed, concatenated RRBS data ###
 cd /hb/groups/kelley_lab/tina/mytilus/02_trim/final_trim0603/concat
 

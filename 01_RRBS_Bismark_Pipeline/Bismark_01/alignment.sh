@@ -30,19 +30,18 @@ strand=$(echo ${LINE} | awk '{ print $5; }')
 echo "running Bismark for sample: ${sample} (${tissue}, ${lane})"
 
 ### Defining path to Bowtie2, reference genome folder, and directory that contained all the concatenated, trimmed RRBS reads ###
-bowtie2_dir="/hb/groups/kelley_lab/tina/mytilus/bowtie2/bowtie2-2.4.2-sra-linux-x86_64" # this directory contains bowtie2
-genome_folder="/hb/groups/kelley_lab/tina/mytilus/ref_genome/GCF_021869535.1/" # this directoy contains both the unmodified genome (as .fa or .fasta files) as well as the two bisulfite genome subdirectories which were generated in the Bismark Genome Preparations step
+genome_folder="/hb/groups/kelley_lab/tina/mytilus/ref_genome/GCF_021869535.1/" # this directoy contains both the unmodified genome (as .fa or .fasta files) as well as the two bisulfite genome subdirectories 
 trimmed_dir="/hb/groups/kelley_lab/tina/mytilus/02_trim/final_trim0603/concat" # this directory contains the trimmed, concatenated reads for all samples
-bismark_dir="/hb/groups/kelley_lab/tina/mytilus/Bismark-master" 
+bismark_dir="/hb/groups/kelley_lab/tina/mytilus/Bismark-master" # where bismark is downloaded
 
 ### Create output directory based on tissue and sample ###
 mkdir -p final_map/${tissue}/${sample}
 cd final_map/${tissue}/${sample}
 
 ### Running paired-end alignment via Bismark ###
-#relax default stringent setting from (L,0,-0.2)
-#default is directional BS-seq libraries
-#specify paired-end alignment
+# 1. relax default stringent setting from (L,0,-0.2)
+# 2. default is directional BS-seq libraries
+# 3. specify paired-end alignment
 
 ${bismark_dir}/bismark -p 4 ${genome_folder} \
 --gzip -score_min L,0,-0.6 \
