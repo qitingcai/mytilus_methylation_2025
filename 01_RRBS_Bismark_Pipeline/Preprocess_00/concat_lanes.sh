@@ -16,24 +16,26 @@
 
 ### Aim of this script: concatenating lane 01-04 for both reverse and forward trimmed reads for all samples ###
 
-# Load the sample name based on the SLURM array task ID
-LINE=$(sed -n "${SLURM_ARRAY_TASK_ID}p" /hb/groups/kelley_lab/tina/mytilus/03_mapping/02_alignment/sample.txt)
+# Load the sample name based on the sample ID on the meta sample file 
+LINE=$(sed -n "${SAMPLE_ID}p" /hb/groups/kelley_lab/tina/mytilus/03_mapping/02_alignment/sample.txt)
 sample=$(echo ${LINE} | awk '{ print $2; }')
 
-# Define the input and output file paths
+# Define the input file path that includes all trimmed reads
 input_path="/hb/groups/kelley_lab/tina/mytilus/02_trim/final_trim0603"
+
+#Define the output file path
 output_path="/hb/groups/kelley_lab/tina/mytilus/02_trim/final_trim0603/concat"
 
-# Ensure the output directory exists
+# create output directory
 mkdir -p $output_path
 
-# Concatenate R1 files
+# Concatenate all four lanes of trimmed reads for R1 files
 cat ${input_path}/${sample}_L001_R1_001.65bp_5prime.fq.gz \
     ${input_path}/${sample}_L002_R1_001.65bp_5prime.fq.gz \
     ${input_path}/${sample}_L003_R1_001.65bp_5prime.fq.gz \
     ${input_path}/${sample}_L004_R1_001.65bp_5prime.fq.gz > ${output_path}/${sample}_R1_merged.fq.gz
 
-# Concatenate R2 files
+# Concatenate all four lanes of trimmed reads for R2 files
 cat ${input_path}/${sample}_L001_R2_001.65bp_5prime.fq.gz \
     ${input_path}/${sample}_L002_R2_001.65bp_5prime.fq.gz \
     ${input_path}/${sample}_L003_R2_001.65bp_5prime.fq.gz \
