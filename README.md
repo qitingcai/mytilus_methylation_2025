@@ -10,3 +10,11 @@ Code repository for mussel DNA methylation project
 
 #### 02_Rcode: scripts used to run differential methylation analyses in R
 
+"Repository Content": {
+  "prefix": "",
+  "body": [
+    "01_RRBS_Bismark_Pipeline",
+    ""
+  ],
+  "description": "Repository Content"
+}
