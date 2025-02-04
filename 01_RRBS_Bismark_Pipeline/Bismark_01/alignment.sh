@@ -43,7 +43,8 @@ cd final_map/${tissue}/${sample}
 #relax default stringent setting from (L,0,-0.2)
 #default is directional BS-seq libraries
 #specify paired-end alignment
-${bismark_dir}/bismark --p 4 ${genome_folder} \
+
+${bismark_dir}/bismark -p 4 ${genome_folder} \
 --gzip -score_min L,0,-0.6 \
 -1 ${trimmed_dir}/${sample}_R1_merged.fq.gz \
 -2 ${trimmed_dir}/${sample}_R2_merged.fq.gz

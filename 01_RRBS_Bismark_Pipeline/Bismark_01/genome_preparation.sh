@@ -27,7 +27,8 @@
 # wget https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.4.2/bowtie2-2.4.2-sra-linux-x86_64.zip/download
 # unzip download
 
-wget https://sourceforge.net/projects/bowtie-bio/files/bowtie2/2.5.4/bowtie2-2.5.4-sra-linux-x86_64.zip
+#add location to system PATH
+#export PATH=$HOME/tools/bowtie2/bowtie2-2.4.2-sra-linux-x86_64:$PATH
 
 
 #set path to find bismark, bowtie2 and folder that contained reference genome
