@@ -33,4 +33,10 @@ Code repository for mussel DNA methylation project
 │   │   ├── pca_all.R
 │   │   └── average_meth.R
 │   └── Readme.md
+│
+└── Data
+    ├── 
+
+
+
 ```
