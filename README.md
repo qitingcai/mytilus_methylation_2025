@@ -19,15 +19,15 @@ Code repository for mussel DNA methylation project
 │   │   │      ├── pretrim_fastqc_00.sh
 │   │   │      ├── pretrim_multiqc_01.sh
 │   │   │      ├── trim_02.sh
-│   │   │      ├── concat_lanes.sh
-│   │   │      ├── concat_fastqc.sh
-│   │   │      └── concat_multiqc.sh
+│   │   │      ├── concat_lanes_03.sh
+│   │   │      ├── concat_fastqc_04.sh
+│   │   │      └── concat_multiqc_05.sh
 │   │   ├── Bismark_01
-│   │   │      ├── genome_download.sh
-│   │   │      ├── genome_preparation.sh
-│   │   │      ├── alignment.sh
-│   │   │      ├── methy_extractor.sh
-│   │   └──    └── merge_strand.sh
+│   │   │      ├── genome_download_00.sh
+│   │   │      ├── genome_preparation_01.sh
+│   │   │      ├── alignment_02.sh
+│   │   │      ├── methy_extractor_03.sh
+│   │   └──    └── merge_strand_04.sh
 │   │  
 │   ├── 02_R_code
 │   │   ├── foot_DM_analysis.R
