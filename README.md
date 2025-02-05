@@ -8,7 +8,7 @@ Code repository for mussel DNA methylation project
 **02_Rcode**: this folder includes scripts used to run differential methylation analyses in R. Analyses were ran separately for foot and gill sample subsets
 
 
-
+**Data**: contains all coverage files used for DM analyses, genome annotatation file (with introns annotated), GO terms
 
 
 ### File structure
@@ -38,7 +38,9 @@ Code repository for mussel DNA methylation project
 │
 ├── Data
 │   ├── foot_coverage_files (n=20 + foot_metadata.txt)
-│   └── gill_coverage_files (n=20 + gill_metadata.txt)
+│   ├── gill_coverage_files (n=20 + gill_metadata.txt)
+│   ├── GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf
+│   └── new_genomic_intron.gff
 │
 └── README.MD
 
