@@ -1,0 +1,21 @@
+sample	meth	tissue	origin_site	transplant_site	LENGTH_INIT (mm)	OUTPLANT_SITE	LENGTH_FINAL (mm)	GROUP_CODE	65bp trimmed library size (R1=R2)	pretrimmed_library_size
+14B-G_S25	14B	G	exposed	protected	13.29	protected	14.49	lowexposedprotectedGill	31262140	163420354
+15G-G_S24	15G	G	exposed	exposed	9.4	exposed	10.04	lowexposedexposedGill	11702535	58547230
+18W-G_S41	18W	G	protected	protected	12.23	protected	12.93	lowprotectedprotectedGill	34102250	119961648
+21B-G_S7	21B	G	exposed	exposed	8.75	exposed	9.55	lowexposedexposedGill	107553550	291206973
+29W-G_S76	29W	G	protected	exposed	12.02	exposed	13.77	lowprotectedexposedGill	41147925	117281247
+29Y-G_S68	29Y	G	protected	protected	9.32	protected	10.01	lowprotectedprotectedGill	96679960	56717110
+2B-G_S17	2B	G	exposed	protected	12.01	protected	13.53	lowexposedprotectedGill	11490245	187846869
+40Y-G_S63	40Y	G	protected	exposed	7.76	exposed	9.4	lowprotectedexposedGill	88852920	127021955
+45G-G_S69	45G	G	exposed	exposed	7.5	exposed	8.21	lowexposedexposedGill	27562795	171538718
+47W-G_S80	47W	G	protected	exposed	8.92	exposed	9.33	lowprotectedexposedGill	146885895	145657469
+50B-G_S83	50B	G	exposed	exposed	11.35	exposed	12.77	lowexposedexposedGill	98191990	212269156
+51B-G_S18	51B	G	exposed	protected	10.87	protected	11.36	lowexposedprotectedGill	10699065	198411433
+55B-G_S40	55B	G	exposed	protected	12.69	protected	13.73	lowexposedprotectedGill	68379220	176710468
+55Y-G_S10	55Y	G	protected	protected	9.73	protected	9.94	lowprotectedprotectedGill	92791595	60154927
+56Y-G_S53	56Y	G	protected	exposed	8.1	exposed	8.74	lowprotectedexposedGill	188211465	114004849
+67B-G_S8	67B	G	exposed	protected	11.41	protected	11.93	lowexposedprotectedGill	9763065	350793385
+67W-G_S86	67W	G	protected	exposed	13.75	exposed	15.02	lowprotectedexposedGill	50485305	167163191
+75Y-G_S9	75Y	G	protected	protected	8.42	protected	9.12	lowprotectedprotectedGill	62700235	88045684
+76Y-G_S85	76Y	G	exposed	exposed	7.53	exposed	9.24	lowexposedexposedGill	57943405	87981056
+90W-G_S67	90W	G	protected	protected	12.19	protected	12.46	lowprotectedprotectedGill	12104365	58001063

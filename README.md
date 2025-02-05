@@ -37,8 +37,8 @@ Code repository for mussel DNA methylation project
 │   └── Readme.md
 │
 └── Data
-    ├── Bismark coverage files (n=40)
-
+    ├── foot_coverage_files (n=20)
+    └── gill_coverage_files (n=20)
 
 
 ```
