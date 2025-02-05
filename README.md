@@ -1,9 +1,11 @@
 # mytilus_methylation_2025
 Code repository for mussel DNA methylation project
 
-#### 01_RRBS_Bismark_Pipeline: scripts used to preprocess raw RRBS reads and generate CpG methylation calls via the Bismark pipeline
+**01_RRBS_Bismark_Pipeline**: this folder includes scripts used to preprocess raw RRBS reads and generate CpG methylation calls via the Bismark pipeline
+1. Preprocess_00 (quality assessment, trimming, concatenating lanes)
+2. Bismark_01 (downloading & preparing reference genome, alignment, methylation extraction, merging strand information)
 
-#### 02_Rcode: scripts used to run differential methylation analyses in R
+**02_Rcode**: this folder includes scripts used to run differential methylation analyses in R. Analyses were ran separately for foot and gill sample subsets
 
 
 
