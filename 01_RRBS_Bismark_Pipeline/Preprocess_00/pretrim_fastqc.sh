@@ -13,7 +13,9 @@
 #SBATCH --error=slurm_%j.err             # Standard output and error log
 #SBATCH --no-requeue                     # don't requeue the job upon NODE_FAIL
 
-## Loading fastqc, contains FastQC v0.12.1 ###
+#Note: all undertermined samples were removed prior to QC
+
+### Loading fastqc, contains FastQC v0.12.1 ###
 module load parallel fastqc 
 
 ### Running fastqc on all raw rrbs files ###
