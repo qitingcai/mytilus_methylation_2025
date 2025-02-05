@@ -13,7 +13,7 @@ Code repository for mussel DNA methylation project
 
 ### File structure
 ```
-├── MYTILUS_METHYLATION_2025
+├── Mytilus_methylation_2025
 │   ├── 01_RRBS_Bismark_Pipeline
 │   │   ├── Preprocess_00
 │   │   │      ├── pretrim_fastqc_00.sh
@@ -33,12 +33,13 @@ Code repository for mussel DNA methylation project
 │   │   ├── foot_DM_analysis.R
 │   │   ├── gill_DM_analysis.R
 │   │   ├── pca_all.R
-│   │   └── average_meth.R
-│   └── Readme.md
+│   └── └── average_meth.R 
 │
-└── Data
-    ├── foot_coverage_files (n=20 + foot_metadata.txt)
-    └── gill_coverage_files (n=20 + gill_metadata.txt)
+├── Data
+│   ├── foot_coverage_files (n=20 + foot_metadata.txt)
+│   └── gill_coverage_files (n=20 + gill_metadata.txt)
+│
+└── README.MD
 
 
 ```
