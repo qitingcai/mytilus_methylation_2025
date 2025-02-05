@@ -1,7 +1,7 @@
 ### foot specific ###
 ############ Differential Methylation Analysis ############
 
-### load libraries ###
+### Load libraries ###
 library(vegan)
 library(edgeR)
 library(tidyverse)
@@ -73,6 +73,9 @@ design_foot <- modelMatrixMeth(designSL_foot)
 
 ### Dispersion estimation ###
 y_foot <- estimateDisp(y_foot, design = design_foot, robust = TRUE)
+
+### Create the BCV plot ### 
+plotBCV(y_gill)
 
 ### Testing for differentially methylated CpG loci ###
 
@@ -305,7 +308,6 @@ promoter_subset_foot_df<-as.data.frame(promoter_subset_foot)
 
 ### Adding gene id ###
 promoter_gff <- promoters_Grange # need to be GRange object to subset
-mcols(intron_gff)
 promoter_id_overlaps_foot <- findOverlaps(promoter_subset_foot, promoter_gff)
 
 ### Extract gene_id for matching promoter region (genes associated with first exons, see above, from the GFF file ###
@@ -364,9 +366,8 @@ transDM_foot<-DM_Trans_foot%>%
 df_trans <- CpGsite_foot %>%
   left_join(transDM_foot, by = c("Chr", "Locus")) %>%
   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
-  select(Chr,Locus, Meth)
-df_trans %>% 
-  filter(Meth==1)
+  dplyr::select(Chr,Locus, Meth)
+
   
 ### Adding genic features to the dataframe for each site ###
 
@@ -410,7 +411,7 @@ df_combined_foot_trans <- df_trans%>%
   full_join(df_CpGsite_foot_all , by =c("Chr","Locus")) %>% 
   select(-Meth.y) 
 
-### Running GLM to test the effect of feature on DM pattern (0 or 1) ###
+### Running GLM to test the effect of genomic feature on DM pattern (0 or 1) ###
 glm_trans_foot <- glm(Meth.x ~ feature,
           data=df_combined_foot_trans, 
         family=binomial(link="logit"))
@@ -528,7 +529,7 @@ category_file<-go_foot_trans_dm %>%
    distinct(gene_id, GO_ID)
 
 
-############ For all GO TERMS extract the Parental ############
+############ For all GO TERMS extract the Parental level ############
 
 ### Loading libraries ###
 library(GO.db)
@@ -686,7 +687,7 @@ ud_genes <- UD$gene_id
 ### Combine all genes into a single vector ###
 all_genes <- union(dm_genes, ud_genes)
 
-### Create a named vector with DM genes as 1 and non-DM genes as 0
+### Create a named vector with DM genes as 1 and non-DM genes as 0 ###
 gene_vector <- setNames(
   as.integer(all_genes %in% de_genes),
   all_genes
