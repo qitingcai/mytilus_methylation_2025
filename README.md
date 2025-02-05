@@ -34,14 +34,13 @@ Code repository for mussel DNA methylation project
 │   │   ├── foot_DM_analysis.R
 │   │   ├── gill_DM_analysis.R
 │   │   ├── pca_all.R
-│   └── └── average_meth.R 
-│
-├── Data
-│   ├── foot_coverage_files (n=20 + foot_metadata.txt)
-│   ├── gill_coverage_files (n=20 + gill_metadata.txt)
-│   ├── GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf
-│   └── new_genomic_intron.gff
-│
+│   │   └── average_meth.R 
+│   ├── Data 
+│   │   ├── foot_coverage_files (n=20 + foot_metadata.txt)
+│   │   ├── gill_coverage_files (n=20 + gill_metadata.txt)
+│   │   ├── GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf
+│   └── └── new_genomic_intron.gff
+│   
 └── README.MD
 
 
