@@ -2,7 +2,7 @@
 Code repository for mussel DNA methylation project
 
 **01_RRBS_Bismark_Pipeline**: this folder includes scripts used to preprocess raw RRBS reads and generate CpG methylation calls via the Bismark pipeline
-1. Preprocess_00 (quality assessment, trimming, concatenating lanes)
+1. Preprocess_00 (quality assessment, trimming, concatenating lanes, intron annotation on gff file)
 2. Bismark_01 (downloading & preparing reference genome, alignment, methylation extraction, merging strand information)
 
 **02_Rcode**: this folder includes scripts used to run differential methylation analyses in R. Analyses were ran separately for foot and gill sample subsets
@@ -21,7 +21,8 @@ Code repository for mussel DNA methylation project
 │   │   │      ├── trim_02.sh
 │   │   │      ├── concat_lanes_03.sh
 │   │   │      ├── concat_fastqc_04.sh
-│   │   │      └── concat_multiqc_05.sh
+│   │   │      ├── concat_multiqc_05.sh
+│   │   │      └── add_intron.sh
 │   │   ├── Bismark_01
 │   │   │      ├── genome_download_00.sh
 │   │   │      ├── genome_preparation_01.sh
