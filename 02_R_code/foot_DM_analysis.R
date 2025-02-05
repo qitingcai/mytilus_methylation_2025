@@ -1,88 +1,108 @@
-#foot specific
+### foot specific ###
 
-# Differential Methylation Analysis ----
+### Differential Methylation Analysis ----
 
-
+### load libraries ###
+library(vegan)
+library(edgeR)
+library(tidyverse)
+library(SYNCSA)
+library(mice)
+library(ape)
+library(rtracklayer)
+library(genomation)
+library(plyranges)
+library(GenomicRanges)
 library(lme4)
 
+### Set working directory, include all (top5 for each treatments) foot coverage files ###
 setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot")
+
+### Load metadata file that include sample names, load all coverage files into R ###
 meta_data_foot<-read.delim("foot_metadata.txt", row.names = "sample", stringsAsFactors = FALSE) 
 Sample_foot <- row.names(meta_data_foot)
-
 files_foot <- paste0(Sample_foot,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
 
+### EdgeR function readBismark2DGE reads all the files and collates the counts for all the sample into one data object ###
 yall <- readBismark2DGE(files_foot, sample.names=Sample_foot)
+
+### Check dimension and the count matrix ###
 dim(yall)
 head(yall$counts)
 
+### Save a data frame for downstream analyses ###
 yall_df<-as.data.frame(yall)
 
-#assigning groups to each sample
-sample_me_group<-read.csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot/meth_group_matrix.csv")
-yall$samples$group<-factor(sample_me_group$origin)
-(yall$samples)
-
+### Sum up the counts of methylated and unmethylated reads to get the total read coverage at each CpG site for each sample ###
 Methylation <- gl(2, 1, ncol(yall), labels = c("Me", "Un"))
 Me <- yall$counts[ , Methylation == "Me" ]
 Un <- yall$counts[ , Methylation == "Un" ]
 Coverage <- Me + Un
-
-#filtering n=3 for 66% of samples, total of 14 samples
 head(Coverage)
 
+### Filtering to only include samples with a coverage of at least 3, for 66% of samples, total of 14 samples ###
 n=3
 keep_foot <- rowSums(Coverage >= n) >= 14
 table(keep_foot)
 
+### DGEList object is subsetted to retain only the filtered loci ###
 y_foot <- yall[keep_foot,, keep.lib.sizes=FALSE]
 
-#normalization
+### Normalization - set the library sizes for each sample to be the average of the total read counts for the methylated and unmethylated libraries ###
 TotalLibSize <- y_foot$samples$lib.size[Methylation=="Me"] +
   +                 y_foot$samples$lib.size[Methylation=="Un"]
 y_foot$samples$lib.size <- rep(TotalLibSize, each=2)
  y_foot$samples
 
+### Compute the corresponding methylation summary from the methylated and unmethylated counts ###
 Me_foot <- y_foot$counts[, Methylation=="Me"]
 Un_foot <- y_foot$counts[, Methylation=="Un"]
 
+### Calculating a methylation proportion matrix
 prop_meth_matrix_foot <- Me_foot/(Me_foot+Un_foot)
 
+### We want to use the exposed site as reference level, need to redo leveling for transplant site effect ###
 meta_data_foot$transplant_site<- relevel(factor(meta_data_foot$transplant_site), ref = "exposed")
+
+### Create a design matrix, using origin site, transplant site, and final shell length as fixed effects ###
 designSL_foot <- model.matrix(~0+ origin_site + transplant_site +
                            LENGTH_FINAL..mm., 
                          data=meta_data_foot)
 
-# designSL
+### Expand to the full design matrix modeling the sample and methylation effects ###
 design_foot <- modelMatrixMeth(designSL_foot)
 
+### Dispersion estimation ###
 y_foot <- estimateDisp(y_foot, design = design_foot, robust = TRUE)
 
+### Testing for differentially methylated CpG loci ###
+### fit NB GLMs for all the CpG loci using the glmFit function in edgeR ###
 fit_foot <- glmFit(y_foot, design_foot)
 
-# Origin effects
-#set ref to low exposed
+### Testing for differentially methylated CpG sites between different treatment groups using likelihood ratio tests ###
+### Origin site effects ###
 contr_origin_foot <- makeContrasts(Origin = origin_siteprotected-origin_siteexposed, levels = design_foot)
 lrt_origin_foot <- glmLRT(fit_foot, contrast=contr_origin_foot)
 
-# Transplant effects
+# Transplant site effects ###
 contr_trans_foot <- makeContrasts(Transplant = transplant_siteprotected, levels = design_foot)
 lrt_trans_foot <- glmLRT(fit_foot, contrast=contr_trans_foot)
 
 
-## Wrangle data for volano plot of CpG diff meth
-# Correct p-values
+### Wrangle data for volano plot of CpG diff meth ###
+### Correct p-values using BH method ###
 lrt_origin_foot$table$FDR <- p.adjust( lrt_origin_foot$table$PValue, method = "BH" )
 lrt_trans_foot$table$FDR <- p.adjust( lrt_trans_foot$table$PValue, method = "BH" )
 
-# Apply logical variable for significant DM
+### Apply logical variable for significant DM ###
 lrt_origin_foot$table$Sig <- ifelse(lrt_origin_foot$table$FDR< 0.05, TRUE, FALSE )
 lrt_trans_foot$table$Sig <- ifelse(lrt_trans_foot$table$FDR< 0.05, TRUE, FALSE )
 
-# Apply binary variable for hyper/hypomethylation or "Up" vs "Down"
+### Apply binary variable for hyper/hypomethylation or "Up" vs "Down" ###
 lrt_origin_foot$table$Dir <- ifelse(lrt_origin_foot$table$logFC > 0, "Up", "Down" )
 lrt_trans_foot$table$Dir <- ifelse( lrt_trans_foot$table$logFC > 0, "Up", "Down" )
 
-# Create combined term for significance and fold-change direction of diff meth
+### Create combined term for significance and fold-change direction of diff meth ###
 lrt_origin_foot$table$Sig_Dir <- paste( lrt_origin_foot$table$Sig,
                              lrt_origin_foot$table$Dir,
                              sep = "_" )
@@ -90,23 +110,22 @@ lrt_trans_foot$table$Sig_Dir <- paste( lrt_trans_foot$table$Sig,
                              lrt_trans_foot$table$Dir,
                              sep = "_" )
 
-# Create CpG ID and treatment variables
+### Create CpG ID and treatment variables ###
 lrt_origin_foot$table$Treat <- "Origin"
 lrt_trans_foot$table$Treat <- "Transplant"
 
 lrt_origin_foot$table$sample <- rownames(lrt_origin_foot$table)
 lrt_trans_foot$table$sample <- rownames(lrt_trans_foot$table)
 
-
-# Merge developmental and maternal coefficients
+# Merge origin site and transplant site coefficients ###
 all_CpG_dm <- rbind( lrt_origin_foot$table,
                      lrt_trans_foot$table )
 
-
+### Saving DM sites for transplant site effect and origin site effect as new objects ###
 DM_Trans_foot<-all_CpG_dm %>% filter(Sig =="TRUE",Treat =="Transplant")
 DM_Origin_foot<-all_CpG_dm %>% filter(Sig =="TRUE", Treat =="Origin")
 
-# Developmental and maternal volcano plots
+### Origin site and transplant site associated DM CpG volcano plots ###
 ggplot( data = all_CpG_dm, aes(y = -log( as.numeric( FDR ) ), x = as.numeric( logFC ),
                                color = Sig_Dir ) ) +
     geom_point() +
@@ -118,17 +137,14 @@ ggplot( data = all_CpG_dm, aes(y = -log( as.numeric( FDR ) ), x = as.numeric( lo
     labs( x = "Foot Diff meth", y = "-log FDR" )
 
 
-    #gff with intron annotated
+### Read in gff with intron annotated ###
 gff_intron<-read.gff("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/new_genomic_intron.gff")
 
-# 2. convert the gff object to a GRanges object using the gffToGRanges() function of the R package genomation.
-
+### Convert the gff object to a GRanges object using the gffToGRanges() function of the R package genomation ###
 all_GRange<-gffToGRanges("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/new_genomic_intron.gff", filter = NULL, zero.based = FALSE, ensembl = FALSE) 
 
 
-
-# 3. Divide the annotation GRanges object into different objects filtered for exons, all the noncoding RNAs, and try annotate for introns with agat in Hummingbird, see /hb/groups/kelley_lab/tina/mytilus/ref_genome
-
+### Divide the annotation GRanges object into different objects filtered for exons and introns,  introns annotated with agat in Hummingbird, see /hb/groups/kelley_lab/tina/mytilus/ref_genome ###
 exon_GRange<-all_GRange %>% 
   filter(type == c
          ("exon"))
@@ -136,27 +152,25 @@ intron_GRange<-all_GRange %>%
   filter(type == c
          ("intron")) 
          
-#finding promoter regions
-# Separate positive and negative strand exons
+### Code to find promoter regions -1kb downstream or upstream of first exons ###
+
+### Separate positive and negative strand exons ###
 exon_pos_strand <- exon_GRange %>% filter(strand == "+")
 exon_neg_strand <- exon_GRange %>% filter(strand == "-")
 
 # For positive strand, get the first exon with the smallest start position
 first_exon_pos <- as.data.frame(exon_pos_strand) %>% 
   group_by(gene) %>% 
-  slice_min(order_by = start, n = 1, with_ties =FALSE) #Only return one when there are overlapping first exons to avoid duplicates
+  slice_min(order_by = start, n = 1, with_ties =FALSE) # Only return one when there are overlapping first exons to avoid duplicates
 
-
-  
 # For negative strand, get the first exon with the largest start position, (going from right to left)
 first_exon_neg <- as.data.frame(exon_neg_strand) %>% 
   group_by(gene) %>% 
   slice_max(order_by = start, n = 1, with_ties =FALSE)
 
-# #intersect(first_exon_neg$gene,first_exon_pos$gene) no overlapping genes from pos/neg strand
-
 # Combine both positive and negative strand exons
 first_exon_GRange <- bind_rows(first_exon_pos, first_exon_neg)
+
 # Remove potential duplicated lines further more
 first_exon_GRange <- first_exon_GRange %>% distinct()
 
@@ -205,32 +219,35 @@ promoters_Grange<- GRanges(
 promoters_Grange_df<-as.data.frame(promoters_Grange)
 
 
-#4. Convert a data frame of coordinates of your CpGs to a GRange object using the function makeGRangesFromDataFrame() of the R package GenomicRanges. The data frame will need to be formatted like a GRanges object.
+### Convert a data frame of coordinates of CpGs to a GRange object using the function makeGRangesFromDataFrame() of the R package GenomicRanges ###
 
-#use prop_meth_matrix from above, extract first rows as the position
+#Use prop_meth_matrix from above, extract first rows as all the CpG positions
 prop_meth_matrix_foot <- as.data.frame(prop_meth_matrix_foot)
 prop_meth_matrix_foot_new <- prop_meth_matrix_foot %>%
   rownames_to_column(var = "name") #change row names to column called name
 
 CpGs_foot <- prop_meth_matrix_foot_new  %>%
-  separate(col = 1, into = c("seqid", "start"), sep = "-")
+  separate(col = 1, into = c("seqid", "start"), sep = "-") #separating chromosome, start site information
+
 CpGs_foot$start<-as.numeric(CpGs_foot$start)
+
 CpGs_foot<-CpGs_foot %>% 
   mutate(start= start+1,
-         end =start+1)  #changing from 0 to 1 base for cpg positions
+         end =start+1)  #changing from 0 to 1 base format for cpg positions
 
 # Reorder columns to place 'end' in the third position
 CpGs_foot <- CpGs_foot[, c(1, 2, ncol(CpGs_foot), 3:(ncol(CpGs_foot)-1))]
+
 #make cpg a grange object
 CpGs_foot<-makeGRangesFromDataFrame(CpGs_foot)
 df_cpg_foot<-as.data.frame(CpGs_foot)
 
-#making CpG subsets according to genic features
-#exons
+### Subsetting CpG GRange objects according to genic features ###
+# Exon subset
 exon_subset_foot<-subsetByOverlaps(CpGs_foot, exon_GRange)
 #exon_subset<-as.data.frame(exon_subset) 
 
-#adding gene id
+# Adding gene id
 exon_gff <- subset(all_GRange, type == "exon") #need to be GRange object to subset
 mcols(exon_gff)
 exon_id_overlaps_foot <- findOverlaps(exon_subset_foot, exon_gff)
@@ -238,7 +255,8 @@ exon_id_overlaps_foot <- findOverlaps(exon_subset_foot, exon_gff)
 # Extract gene_id for matching exons from the GFF file
 gene_ids_foot <- mcols(exon_gff)$gene[subjectHits(exon_id_overlaps_foot)]
 query_hits_foot <- queryHits(exon_id_overlaps_foot)
-# Add gene_id only to those rows in exon_subset that have corresponding overlaps
+# Add gene_id only to those rows in exon_subset that have corresponding gene overlaps
+
 # Initialize with NA for those rows that have no overlap
 exon_subset_gene_id_foot <- rep(NA, length(exon_subset_foot))
 # Assign the gene_ids where there is a match
@@ -276,8 +294,6 @@ intron_subset_gene_id_df_foot<-as.data.frame(intron_subset_foot)
 intron_subset_gene_id_df_foot$combined <- paste(intron_subset_gene_id_df_foot$seqnames, intron_subset_gene_id_df_foot$start, sep = "-") #reformat
 
 
-
-
 # Find overlaps with CpG using the adjusted ranges
 promoter_GRange_foot <- findOverlaps(CpGs_foot, promoters_Grange)
 
@@ -285,8 +301,6 @@ promoter_subset_foot<-subsetByOverlaps(CpGs_foot, promoters_Grange)
 promoter_subset_foot_df<-as.data.frame(promoter_subset_foot) 
 #1729 observation
 
-
-#
 #adding gene id
 promoter_gff <- promoters_Grange #need to be GRange object to subset
 mcols(intron_gff)

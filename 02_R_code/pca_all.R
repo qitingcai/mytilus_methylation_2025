@@ -12,7 +12,6 @@ meta<-meta_data< %>%
   rownames_to_column(var = "sample_name")
 Sample <- row.names(meta_data<)
 
-
 files <- paste0(Sample,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
 yall <- readBismark2DGE(files, sample.names=Sample)
 
@@ -41,7 +40,7 @@ imputed_data <- mice(prop_meth_matrix, m = 1, method = 'pmm', seed = 123)
 # Complete the data using the first imputed dataset
 complete_data <- complete(imputed_data, 1)
 
-write.csv(complete_data, "imp_matrix_merged_40samples.csv")
+#write.csv(complete_data, "imp_matrix_merged_40samples.csv")
 
 # Perform PCA using prcomp
 imp_pca_result <- prcomp(t(complete_data))
@@ -52,7 +51,6 @@ imp_scores <- as.data.frame(imp_pca_result$x)
 write.csv(imp_scores, "imp_scores_pca_merged_40samples.csv")
 
 pca_scores<-read.csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/imp_scores_pca_merged_40samples.csv")
-
 
 check_G_between <- function(x) {
   # Find '.G_'

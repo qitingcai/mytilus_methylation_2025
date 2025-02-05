@@ -37,8 +37,8 @@ Code repository for mussel DNA methylation project
 │   └── Readme.md
 │
 └── Data
-    ├── foot_coverage_files (n=20)
-    └── gill_coverage_files (n=20)
+    ├── foot_coverage_files (n=20 + foot_metadata.txt)
+    └── gill_coverage_files (n=20 + gill_metadata.txt)
 
 
 ```

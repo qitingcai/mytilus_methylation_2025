@@ -1,4 +1,5 @@
-#####foot--- run at same time
+#####foot--- (run all code at the same time)
+
 setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot")
 meta_data_foot<-read.delim("foot_metadata.txt", row.names = "sample", stringsAsFactors = FALSE) 
 Sample_foot<- row.names(meta_data_foot)
