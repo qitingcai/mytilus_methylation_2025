@@ -37,7 +37,7 @@ Code repository for mussel DNA methylation project
 │   └── Readme.md
 │
 └── Data
-    ├── 
+    ├── Bismark coverage files (n=40)
 
 
 
