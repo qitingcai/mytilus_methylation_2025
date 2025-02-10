@@ -38,7 +38,7 @@ for file1 in $INPUT_DIR/*_R1_001.fastq.gz; do
         # Check if the current pair of files exist
         if [ -e "$INPUT_DIR/$current_file1" ] && [ -e "$INPUT_DIR/$current_file2" ]; then
             # Run TrimGalore on the current pair of files with rrbs flag
-            trim_galore --gzip "$INPUT_DIR/$current_file1" "$INPUT_DIR/$current_file2" --output_dir "$OUTPUT_DIR" --hardtrim5 65 --cores 2 --paired --rrbs --stringency 1 --fastqc_args "--nogroup" #no group show all the basepairs 
+            trim_galore --gzip "$INPUT_DIR/$current_file1" "$INPUT_DIR/$current_file2" --output_dir "$OUTPUT_DIR" --hardtrim5 65 --cores 2 --paired --rrbs --stringency 1 --fastqc_args "--nogroup" #no group show all the basepairs #The option --hardtrim5 to hard-clip sequences from their 3' end 
         fi
     done
 done
