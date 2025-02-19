@@ -17,6 +17,7 @@
 #### Aim of this script: 
 ### Merging forward and reverse strand information for each position using the methylation extractor outputs (coverage files) ###
 ### refers to script https://marineomics.github.io/FUN_02_DNA_methylation.html#refs ###
+### 0 base conversions ###
 
 ### Loading module ###
 module load miniconda3

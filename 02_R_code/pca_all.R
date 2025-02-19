@@ -48,7 +48,7 @@ imp_pca_result <- prcomp(t(complete_data))
 # Create df of pca loadings with imputation
 imp_scores <- as.data.frame(imp_pca_result$x)
 
-write.csv(imp_scores, "imp_scores_pca_merged_40samples.csv")
+#write.csv(imp_scores, "imp_scores_pca_merged_40samples.csv")
 
 pca_scores<-read.csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/imp_scores_pca_merged_40samples.csv")
 
