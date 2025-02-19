@@ -38,7 +38,7 @@ head(Coverage)
 ### Filtering to only include samples with a coverage of at least 3, for 66% of samples, total of 14 samples ###
 n=3
 keep_gill <- rowSums(Coverage >= n) >= 14
-table(keep_foot)
+table(keep_gill)
 
 ### DGEList object is subsetted to retain only the filtered loci ###
 y_gill <- yall[keep_gill,, keep.lib.sizes=FALSE]
@@ -310,7 +310,7 @@ promoter_id_overlaps_gill <- findOverlaps(promoter_subset_gill, promoter_gff)
 gene_ids_gill<- mcols(promoter_gff)$gene[subjectHits(promoter_id_overlaps_gill)]
 query_hits <- queryHits(promoter_id_overlaps_gill)
 
-### Add gene_id only to those rows in promoter_subset_foot that have corresponding overlaps ###
+### Add gene_id only to those rows in promoter_subset_gill that have corresponding overlaps ###
 # Initialize with NA for those rows that have no overlap
 promoter_subset_gene_id_gill <- rep(NA, length(promoter_subset_gill))
 
