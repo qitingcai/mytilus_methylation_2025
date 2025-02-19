@@ -38,9 +38,12 @@ Code repository for mussel DNA methylation project
 │   ├── Data 
 │   │   ├── foot_coverage_files (n=20 + foot_metadata.txt)
 │   │   ├── gill_coverage_files (n=20 + gill_metadata.txt)
-│   │   ├── bismark_output.csv
 │   │   ├── GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf
-│   └── └── new_genomic_intron.gff
+│   │   ├── new_genomic_intron.gff
+│   ├── Outputs
+|   │   ├── Mbias_output
+|   │   ├── multiqc_outputs (trimmed + pretrimmed reports)
+│   └── └── bismark_output.csv
 │   
 └── README.MD
 
