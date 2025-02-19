@@ -75,7 +75,7 @@ design_foot <- modelMatrixMeth(designSL_foot)
 y_foot <- estimateDisp(y_foot, design = design_foot, robust = TRUE)
 
 ### Create the BCV plot ### 
-plotBCV(y_gill)
+plotBCV(y_foot)
 
 ### Testing for differentially methylated CpG loci ###
 
