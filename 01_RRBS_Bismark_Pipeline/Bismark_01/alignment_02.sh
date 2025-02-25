@@ -6,7 +6,7 @@
 #SBATCH --mail-type=ALL                  # Mail events(NONE,BEGIN,END,FAIL,ALL)
 #SBATCH --mail-user=qcai17@ucsc.edu    # Where to send mail
 #SBATCH --ntasks=1                       # Number of tasks to run
-#SBATCH --cpus-per-task=20                # Number of CPU cores to use per task
+#SBATCH --cpus-per-task=4                # Number of CPU cores to use per task
 #SBATCH --nodes=1                        # Number of nodes to use
 #SBATCH --mem=40G                        # Ammount of RAM to allocate for the task
 #SBATCH --output=slurm_%j.out            # Standard output and error log
