@@ -138,6 +138,7 @@ ggplot( data = all_CpG_dm, aes(y = -log( as.numeric( FDR ) ), x = as.numeric( lo
     facet_grid( Treat ~ . , scale = "free") +
     labs( x = "Foot Diff meth", y = "-log FDR" )
 
+#write.csv(all_CpG_dm, "all_CpG_dm_foot_output.csv")
 
 ### Find genomics regions that each (DM) CpG falls into ###
 ### Read in intron annotated gff, see Preprocess_00/add_intron.sh for code for intron annotation ###
@@ -411,6 +412,12 @@ df_combined_foot_trans <- df_trans%>%
   full_join(df_CpGsite_foot_all , by =c("Chr","Locus")) %>% 
   select(-Meth.y) 
 
+### Remove intergenic regions that overlap with promoter regions ###
+  df_combined_foot_trans<-df_combined_foot_trans%>% 
+    group_by(Chr, Locus) %>%
+ filter(!(any(feature == "promoter") & feature == "interg")) %>%
+  ungroup()
+
 ### Running GLM to test the effect of genomic feature on DM pattern (0 or 1) ###
 glm_trans_foot <- glm(Meth.x ~ feature,
           data=df_combined_foot_trans, 
@@ -431,9 +438,15 @@ df_origin <- CpGsite_foot %>%
   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
   select(Chr,Locus, Meth)
 
-  df_combined_foot_origin <- df_origin %>% 
+df_combined_foot_origin <- df_origin %>% 
   full_join(df_CpGsite_foot_all , by =c("Chr","Locus")) %>% 
   select(-Meth.y) 
+
+### Remove intergenic regions that overlap with promoter regions ###
+df_combined_foot_origin <-df_combined_foot_origin%>% 
+    group_by(Chr, Locus) %>%
+ filter(!(any(feature == "promoter") & feature == "interg")) %>%
+  ungroup()
 
 ### Running GLM to test the effect of feature on DM pattern (0 or 1) ###
 glm_origin_foot <- glm(Meth.x ~ feature,
