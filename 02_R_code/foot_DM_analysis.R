@@ -418,12 +418,20 @@ df_combined_foot_trans <- df_trans%>%
  filter(!(any(feature == "promoter") & feature == "interg")) %>%
   ungroup()
 
-### Running GLM to test the effect of genomic feature on DM pattern (0 or 1) ###
-glm_trans_foot <- glm(Meth.x ~ feature,
-          data=df_combined_foot_trans, 
-        family=binomial(link="logit"))
-summary(glm_trans_foot)
+### Running GLMM to test the effect of genomic feature on DM pattern (0 or 1) ###
 
+### If a CpG falls into intergenic region, it does not have a gene ID and would be "intergenic" 
+   df_combined_foot_trans_df <- df_combined_foot_trans%>%
+  mutate(gene_id = ifelse(is.na(gene_id), "intergenic", gene_id))
+
+   df_combined_foot_trans_df$feature <-
+  as.factor(   df_combined_foot_trans_df$feature)
+
+glmer<-glmer(Meth.x ~ feature + (1 | gene_id), data =  df_combined_foot_trans_df, family = binomial(link = "logit"))
+summary(glmer)
+car::Anova(glmer, type ="III",test.statistic="Chisq")
+#pairwise comparison
+emmeans(glmer, pairwise ~ feature, type="response")
 
 ### DM CpGs associated with origin site effect, separating columns into chromosome and locus ###
 DM_Origin_foot<- separate(DM_Origin_foot, sample, into = c("Chr", "Locus"), sep = "-")
@@ -448,12 +456,25 @@ df_combined_foot_origin <-df_combined_foot_origin%>%
  filter(!(any(feature == "promoter") & feature == "interg")) %>%
   ungroup()
 
-### Running GLM to test the effect of feature on DM pattern (0 or 1) ###
-glm_origin_foot <- glm(Meth.x ~ feature,
-          data=df_combined_foot_origin, 
-        family=binomial(link="logit"))
-summary(glm_origin_foot)
+### Running GLMM to test the effect of feature on DM pattern (0 or 1) ###
 
+### If a CpG falls into intergenic region, it does not have a gene ID and would be "intergenic"
+df_combined_foot_origin_df <- df_combined_foot_origin %>%
+  mutate(gene_id = ifelse(is.na(gene_id), "intergenic", gene_id))
+
+df_combined_foot_origin_df$feature <-
+  as.factor(df_combined_foot_origin_df$feature)
+
+glmer <-glmer(Meth.x ~ feature + (1 | gene_id),
+        data =  df_combined_foot_origin_df,
+        family = binomial(link = "logit"))
+
+summary(glmer)
+
+car::Anova(glmer, type = "III", test.statistic = "Chisq")
+
+emmeans(glmer, pairwise ~ feature)
+ 
 
 
 ############ GO Enrichment analysis ############
