@@ -406,13 +406,27 @@ df_combined_gill_transplant <- df_trans%>%
   full_join(df_CpGsite_gill_all , by =c("Chr","Locus")) %>% 
   dplyr::select(-Meth.y) 
 
+### Remove intergenic regions that overlap with promoter regions ###
+df_combined_gill_transplant<-df_combined_gill_transplant%>% 
+    group_by(Chr, Locus) %>%
+ filter(!(any(feature == "promoter") & feature == "interg")) %>%
+  ungroup()
 
-### Running GLM to test the effect of feature on DM pattern (0 or 1) ###
-glm_transplant_gill <- glm(Meth.x ~ feature,
-          df_combined_gill_transplant , 
-          family=binomial(link="logit"))
-summary(glm_transplant_gill)
+### Running GLMM to test the effect of genomic feature on DM pattern (0 or 1) ###
 
+### If a CpG falls into intergenic region, it does not have a gene ID and would be "intergenic"
+df_combined_gill_transplant_df <-    df_combined_gill_transplant %>%
+  mutate(gene_id = ifelse(is.na(gene_id), "intergenic", gene_id))
+
+df_combined_gill_transplant_df$feature <-
+  as.factor(df_combined_gill_transplant_df$feature)
+
+glmer<-glmer(Meth.x ~ feature + (1 | gene_id), data = df_combined_gill_transplant_df, family = binomial(link = "logit"))
+summary(glmer)
+
+car::Anova(glmer, type ="III",test.statistic="Chisq")
+ 
+emmeans(glmer, pairwise ~ feature)
 
 ### DM CpGs associated with origin site effect, separating columns into chromosome and locus ###
 DM_Origin_gill<- separate(DM_Origin_gill, sample, into = c("Chr", "Locus"), sep = "-")
@@ -431,11 +445,28 @@ df_combined_gill_origin <- df_origin%>%
   full_join(df_CpGsite_gill_all , by =c("Chr","Locus")) %>% 
   dplyr::select(-Meth.y) 
 
-### Running GLM to test the effect of genomic feature on DM pattern (0 or 1) ###
-glm_origin_gill <- glm(Meth.x ~ feature,
-          df_combined_gill_origin, 
-          family=binomial(link="logit"))
-summary(glm_origin_gill)
+
+### Remove intergenic regions that overlap with promoter regions ###
+df_combined_gill_origin <-df_combined_gill_origin %>% 
+    group_by(Chr, Locus) %>%
+ filter(!(any(feature == "promoter") & feature == "interg")) %>%
+  ungroup()
+
+### Running GLMM to test the effect of genomic feature on DM pattern (0 or 1) ###
+
+### If a CpG falls into intergenic region, it does not have a gene ID and would be "intergenic"
+
+  df_combined_gill_origin_df <-  df_combined_gill_origin%>%
+  mutate(gene_id = ifelse(is.na(gene_id), "intergenic", gene_id))
+
+  df_combined_gill_origin_df$feature <-
+  as.factor(df_combined_gill_origin_df$feature)
+   
+ glmer<-glmer(Meth.x ~ feature + (1 | gene_id), data =  df_combined_gill_origin_df, family = binomial(link = "logit"))
+ 
+ summary(glmer)
+ car::Anova(glmer, type ="III",test.statistic="Chisq")
+ emmeans(glmer, pairwise ~ feature)
 
 
 
@@ -473,6 +504,14 @@ df_trans_all_fix <- df_CpGsite_gill_all %>%
   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
   select(Chr,Locus, Meth,gene_id) %>%  # Removing intergenic features that do not correspond with a gene
   na.omit()
+
+### Origin site effect DM, rerun with joint originDM_gill
+# df_trans_all_fix <- df_CpGsite_gill_all %>%
+ # left_join(originDM_gill, by = c("Chr", "Locus")) %>%
+  # mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
+  # select(Chr,Locus, Meth,gene_id) %>%  # Removing intergenic features that do not correspond with a gene
+  # na.omit()
+
 
 ### Matching genes with go terms ###
 go_gill_trans_dm <- df_trans_all_fix %>% 
