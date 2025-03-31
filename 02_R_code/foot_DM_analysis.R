@@ -512,6 +512,13 @@ df_trans_all_fix <- df_CpGsite_foot_all %>%
   select(Chr,Locus, Meth,gene_id,feature) %>%  # Removing intergenic features that do not correspond with a gene
   na.omit()
 
+### code for origin site effect ###
+# df_trans_all_fix <- df_CpGsite_foot_all %>%
+#   left_join(originDM_foot, by = c("Chr", "Locus")) %>%
+#   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
+#   dplyr::select(Chr,Locus, Meth,gene_id,feature) %>%  
+#   na.omit()
+
 ### Extracting all DM CpGs ###
   DM_direc <- df_trans_all_fix %>%
   filter(Meth == 1) %>%
