@@ -125,5 +125,58 @@ pca_imputated_merged<- ggplot(pca_data, aes(x = PC1,
 pca_imputated_merged
 
 
+### Assessing relationship between PC1 and final shell length ###
+
+### Add length data ###
+length_data<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/sample_librarysize_length_top5.csv")
+
+### Run a regression of PC1 and final shell length ###
+
+#reformatting
+pca_scores$sample_id<-rownames(pca_scores) %>% 
+  gsub("^X", "", .) %>%        # Remove the initial "X"
+  gsub("_.*$", "", .) %>% 
+  gsub("\\.", "-", .)  
+
+colnames(length_data)[1] <- "sample_name"
+
+### combining PCA scores and sample information (length data) ###
+PC <- length_data %>% 
+  left_join(pca_scores, by = c("sample ID"="sample_id"))
+
+PC$`sample ID` <- sub("-.*", "", PC$`sample ID`)
+
+pc1_length<-ggplot(PC, aes(x = `LENGTH_FINAL (mm)`, y = PC1)) + #plotting shell length and PC1 loadings
+  geom_point(aes(color = Tissue.x),
+             size=8) +  # Keep points colored by tissue
+  geom_smooth(method = "lm", size = 0.5, alpha = 0.1, color = "black") +  # Single regression line for all shell length and PC1
+  geom_line(aes(group = `sample ID`), color = "black", linetype = 1) + 
+  labs(
+    y = "PC1", #label y axis
+    x = "Final shell length (mm)", #label x axis
+    color = "Tissue Type" #specify color of points
+  ) + scale_color_manual(values = c("Foot" = "#3bbdcc", "Gill" = "#e68d4e"),
+                         labels = c("F" = "Foot", "G" = "Gill"))+ #specify color of points
+  theme_bw() +
+  theme( strip.text = element_text(size = 20),  # Facet strip text size
+         axis.text.x = element_text(size = 20), # X-axis text size
+         axis.text.y = element_text(size = 20), # Y-axis text size
+         axis.title = element_text(size = 20),  # Axis title size
+         legend.text = element_text(size = 20), # Legend text size
+         legend.title = element_text(size = 20),# Legend title size
+         panel.grid = element_blank()           # Remove grid lines
+  )
+
+pc1_length
+
+library(lmerTest)
+library(lme4)
+
+### Running GLMM to see if length correlates with PC1 loading ###
+lm_length<-lmer(PC1~`LENGTH_FINAL (mm)` + Tissue.x + (1|`sample ID`), data=PC)
+summary(lm_length)
+
+
+
 
 
