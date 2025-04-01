@@ -34,15 +34,20 @@ Code repository for mussel DNA methylation project
 │   │   ├── foot_DM_analysis.R
 │   │   ├── gill_DM_analysis.R
 │   │   ├── pca_all.R
-│   │   └── average_meth.R 
+│   │   ├── average_meth.R
+│   │   ├── proportion_plot.R
+│   │   ├── average_lfc.R
+│   │   └── GOMWU.R
 │   ├── Data 
 │   │   ├── foot_coverage_files (n=20 + foot_metadata.txt)
 │   │   ├── gill_coverage_files (n=20 + gill_metadata.txt)
 │   │   ├── GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf
 │   │   ├── new_genomic_intron.gff
 │   ├── Outputs
-|   │   ├── Mbias_output
+|   │   ├── Mbias_output (mbias_report.html)
 |   │   ├── multiqc_outputs (trimmed + pretrimmed reports)
+|   │   ├── GO_analyses
+|   │   ├── imp_scores_pca_merged_40samples.csv
 │   └── └── bismark_output.csv
 │   
 └── README.MD
