@@ -128,15 +128,17 @@ DM_Trans_foot<-all_CpG_dm %>% filter(Sig =="TRUE",Treat =="Transplant")
 DM_Origin_foot<-all_CpG_dm %>% filter(Sig =="TRUE", Treat =="Origin")
 
 ### Origin site and transplant site associated DM CpG volcano plots ###
-ggplot( data = all_CpG_dm, aes(y = -log( as.numeric( FDR ) ), x = as.numeric( logFC ),
+foot_dff_meth<-ggplot( data = all_CpG_dm, aes(y = -log( as.numeric( FDR ) ), x = as.numeric( logFC ),
                                color = Sig_Dir ) ) +
-    geom_point() +
-    theme_classic( base_size = 40 ) +
+    theme_classic(base_size = 40) +
+    geom_point(size=4) +
     theme( legend.position = "none",
            strip.background = element_blank() ) +
     scale_color_manual( values = c( "black", "black", "blue", "red" ) ) +
     facet_grid( Treat ~ . , scale = "free") +
-    labs( x = "Foot Diff meth", y = "-log FDR" )
+    labs( x = "Foot", y = "-log p-value" )
+
+foot_dff_meth
 
 #write.csv(all_CpG_dm, "all_CpG_dm_foot_output.csv")
 
@@ -749,4 +751,28 @@ enriched_go_ids <- overrep_go$category
 enriched.GO <- GO.wall$category[p.adjust(GO.wall$over_represented_pvalue, method = "BH" ) < 0.05]
  head(enriched.GO)
  #character(0)
+
+
+
+### prep for GOMWU test analyses ###
+
+
+gff_gene_clean <- gene %>%
+  separate(attributes, into = c("ID", "Dbxref", "Name", "Description", "Other"), sep = ";", fill = "right") %>%
+  mutate(across(everything(), ~ gsub(".*=", "", .))) %>%  # Remove 'key=' part from each value
+dplyr::select(Name, Description)
+  
+  #want to have gene names, then add the gff_gene_clean data
+gene_name_DMsites_foot_origin<-left_join(df_combined_foot_origin,
+                                         gff_gene_clean,
+                                         by=c("gene_id"="Name")) %>% 
+  dplyr::select(Chr, Meth.x, Locus,  gene_id, feature, Description)
+#write_csv(gene_name_DMsites_foot_origin,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/GO Enrichment/gene_name_DMsites_foot_origin_corrected.csv")
+
+gene_name_DMsites_foot_transplant<-left_join(df_combined_foot_trans,
+                                         gff_gene_clean,
+                                         by=c("gene_id"="Name")) %>% 
+  dplyr::select(Chr, Meth.x, Locus,  gene_id, feature, Description)
+#write_csv(gene_name_DMsites_foot_transplant,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/GO Enrichment/gene_name_DMsites_foot_transplant_corrected.csv")
+
 

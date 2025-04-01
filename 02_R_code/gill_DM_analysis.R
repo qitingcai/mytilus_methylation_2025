@@ -128,16 +128,19 @@ DM_Trans_gill<-all_CpG_dm %>% filter(Sig =="TRUE",Treat =="Transplant")
 DM_Origin_gill<-all_CpG_dm %>% filter(Sig =="TRUE", Treat =="Origin")
 
 ### Origin site and transplant site associated DM CpG volcano plots ###
-ggplot( data = all_CpG_dm, aes(y = -log( as.numeric( FDR ) ), x = as.numeric( logFC ),
+gill_dff_meth<-ggplot( data = all_CpG_dm, aes(y = -log( as.numeric( FDR ) ), x = as.numeric( logFC ),
                                color = Sig_Dir ) ) +
-    geom_point() +
+    geom_point(size=4) +
     theme_classic( base_size = 40 ) +
     theme( legend.position = "none",
            strip.background = element_blank() ) +
     scale_color_manual( values = c( "black", "black", "blue", "red" ) ) +
     facet_grid( Treat ~ . , scale = "free") +
-    labs( x = "Gill Diff meth", y = "-log FDR" )
+    labs( x = "Gill", y = "-log p-value" )
 
+gill_dff_meth
+
+#write.csv(all_CpG_dm, "all_CpG_dm_gill_output.csv")
 
 ### Find genomics regions that each (DM) CpG falls into ###
 ### Read in intron annotated gff, see Preprocess_00/add_intron.sh for code for intron annotation ###
@@ -715,7 +718,31 @@ GO.wall <- goseq(pwf, gene2cat = category_list, method = "Wallenius", use_genes_
 overrep_go<-GO.wall %>% filter(over_represented_pvalue<0.05)
  enriched_go_ids <- overrep_go$category
 
- 
  ### FDR corrected ###
  enriched.GO <- GO.wall$category[p.adjust(GO.wall$over_represented_pvalue, method = "BH" ) < .05]
  head(enriched.GO) #character(0)
+
+
+### prep for GOMWU test analyses ###
+
+gff_gene_clean <- gene %>%
+  separate(attributes, into = c("ID", "Dbxref", "Name", "Description", "Other"), sep = ";", fill = "right") %>%
+  mutate(across(everything(), ~ gsub(".*=", "", .))) %>%  # Remove 'key=' part from each value
+dplyr::select(Name, Description)
+  
+#want to have gene names, then add the gff_gene_clean data
+gene_name_DMsites_gill_origin<-left_join(df_combined_gill_origin,
+                                         gff_gene_clean,
+                                         by=c("gene_id"="Name")) %>% 
+  dplyr::select(Chr, Meth.x, Locus,  gene_id, feature, Description)
+#write_csv(gene_name_DMsites_gill_origin,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/GO Enrichment/gene_name_DMsites_gill_origin_corrected.csv")
+
+gene_name_DMsites_gill_transplant<-left_join(df_combined_gill_transplant,
+                                         gff_gene_clean,
+                                         by=c("gene_id"="Name")) %>% 
+  dplyr::select(Chr, Meth.x, Locus,  gene_id, feature, Description)
+#write_csv(gene_name_DMsites_gill_transplant,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/GO Enrichment/gene_name_DMsites_gill_transplant_corrected.csv")
+
+
+
+
