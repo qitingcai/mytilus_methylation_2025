@@ -5,11 +5,12 @@ Code repository for mussel DNA methylation project
 1. Preprocess_00 (quality assessment, trimming, concatenating lanes, intron annotation on gff file)
 2. Bismark_01 (downloading & preparing reference genome, alignment, methylation extraction, merging strand information)
 
-**02_Rcode**: this folder includes scripts used to run differential methylation analyses in R. Analyses were ran separately for foot and gill sample subsets
+**02_Rcode**: this folder includes scripts used to run differential methylation analyses in R. Analyses were ran separately for foot and gill sample subsets. Also include scripts to make plots and run GO analyses.
 
 
-**Data**: contains all coverage files used for DM analyses, genome annotatation file (with introns annotated), GO terms, bismark output
+**Data**: contains all coverage files used for DM analyses, genome annotatation file (with introns annotated), GO terms
 
+**Outputs**: contains analyses outputs
 
 ### File structure
 ```
