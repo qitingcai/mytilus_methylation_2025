@@ -67,61 +67,69 @@ pca_scores$Tissue <- sapply(row.names(pca_scores), check_G_between)
 sample_ids <- rownames(pca_scores)
 extracted_letters <-sub("^X(\\w+).*", "\\1", sample_ids)
 
-meta_data<-read.delim("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/sample_full_top5_nobaseline.txt", row.names = "sample", stringsAsFactors = FALSE) %>% 
+meta_data<-read.delim("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/sample_full_top5_nobaseline_pca.txt", row.names = "sample", stringsAsFactors = FALSE) %>% 
   na.omit()
 
 # Change the first column to keep only the desired portion
 pca_scores[, 1] <- sub("^X(\\w+)\\..*", "\\1", pca_scores[, 1])
 
+### Merging metadata and pca scores data ###
+pca_data <-meta_data %>% 
+  left_join(pca_scores,
+            by=c("meth"="X",
+                 "tissue"="Tissue"))
 
-pca_data <- data.frame(
-  PC1 = pca_scores$PC1,
-  PC2 = pca_scores$PC2,
-  Label = extracted_letters,
-  SampleID = extracted_letters ,
-  Tissue = meta_data$tissue# Assuming 'sample_ids' is a vector containing sample IDs
-)
-
-# Create lines connecting points with the same letter
+### Create lines connecting points with the same letter ###
 line_data <- pca_data %>%
-  group_by(Label) %>%
-  filter(n() > 1) %>%
-  arrange(Label, PC1, PC2)
+  group_by(meth) %>%
+  filter(dplyr::n() > 1) %>%
+  arrange(meth, PC1, PC2)
 
-pca_imputated_merged<- ggplot(pca_data, aes(x = PC1, 
-                                              y = PC2, 
-                                              color = meta_data$tissue,
-                                              shape = meta_data$origin_site)) +
-  geom_point(size = 8) +
-  geom_line(aes(group = SampleID), color = "black", linetype = 1) +
-  #geom_text(aes(label = SampleID), hjust = 1.5, vjust = 1.5, size = 3, check_overlap = TRUE) +
-  theme_bw() +
+pca_imputated_merged <- ggplot(pca_data, aes(
+  x = PC1,
+  y = PC2,
+  shape = GROUP_CODE,
+  fill = tissue
+)) +
+  geom_point(size = 10, alpha = 0.85, stroke = 0.2, color = "black") +
+  geom_line(aes(group = meth), color = "black", linetype = 1) +
+  scale_shape_manual(
+    values = c(
+      "protected_protected" = 21,
+      "protected_exposed" = 22,
+      "exposed_exposed" = 23,
+      "exposed_protected" = 24
+    ),
+    labels = c(
+      "protected_protected" = "Protected_Protected",
+      "protected_exposed" = "Protected_Exposed",
+      "exposed_exposed" = "Exposed_Exposed",
+      "exposed_protected" = "Exposed_Protected"
+    )
+  ) +
+  scale_fill_manual(
+    values = c("Foot" = "#3bbdcc", "Gill" = "#e68d4e")
+  ) +
+  guides(
+    fill = guide_legend(override.aes = list(shape = 21)),
+    shape = guide_legend()
+  ) +
   labs(
     x = "PC1 (5.14%)",
     y = "PC2 (4.71%)",
-    color = "Tissue Type",
-    shape = "Origin Site"
-  )+
-  scale_color_manual(
-    values = c("F" = "#3bbdcc", "G" = "#e68d4e"),  # Map colors
-    labels = c("F" = "Foot", "G" = "Gill")         # Set legend labels
+    fill = "Tissue Type",
+    shape = "Treatment"
   ) +
-  scale_shape_manual(
-    values = c("protected" = 16, "exposed" = 15),  # Customize shapes, e.g., 16 = circle, 17 = triangle
-    labels = c("protected" ="Protected", "exposed"="Exposed")             # Set shape legend labels
-  )+
+  theme_bw() +
   theme(
-    panel.grid = element_blank()  # Remove grid lines
-  )+theme(
-    strip.text = element_text(size = 14),         # Increase size of facet strip text
-    axis.text.x = element_text(size = 12), # Increase x-axis text size
-    axis.text.y = element_text(size = 12),       # Increase y-axis text size
-    axis.title = element_text(size = 14),        # Increase axis titles size
-    legend.text = element_text(size = 12),       # Increase legend text size
-    legend.title = element_text(size = 14),      # Increase legend title size
-    panel.grid = element_blank()                 # Remove background grid lines
+    panel.grid = element_blank(),
+    strip.text = element_text(size = 14),
+    axis.text.x = element_text(size = 20),
+    axis.text.y = element_text(size = 20),
+    axis.title = element_text(size = 20),
+    legend.text = element_text(size = 20),
+    legend.title = element_text(size = 20)
   )
-
 pca_imputated_merged
 
 
@@ -148,8 +156,8 @@ PC$`sample ID` <- sub("-.*", "", PC$`sample ID`)
 
 pc1_length<-ggplot(PC, aes(x = `LENGTH_FINAL (mm)`, y = PC1)) + #plotting shell length and PC1 loadings
   geom_point(aes(color = Tissue.x),
-             size=8) +  # Keep points colored by tissue
-  geom_smooth(method = "lm", size = 0.5, alpha = 0.1, color = "black") +  # Single regression line for all shell length and PC1
+             size=10) +  # Keep points colored by tissue
+  geom_smooth(method = "lm", size = 0.8, alpha = 0.1, color = "black") +  # Single regression line for all shell length and PC1
   geom_line(aes(group = `sample ID`), color = "black", linetype = 1) + 
   labs(
     y = "PC1", #label y axis
