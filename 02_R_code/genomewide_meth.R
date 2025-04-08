@@ -89,91 +89,56 @@ combined_meth_perc<-meth_perc_cov %>%
   left_join(meta_data_gill,  by ="Sample")
 
 
+### test whether genome wide DNA methylation proportion differ by tissue type or treatment group, plot the dara ###
+### loading data ###
+meth_prop_all<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/percentage_allsample_genomewide.csv")
+meth_prop_all$`Pre-filtered mean global methylation (%)`<-meth_prop_all$`Pre-filtered mean global methylation (%)`/100
+meth_prop_all$`Post-filtered mean global methylation (%)`<-meth_prop_all$`Post-filtered mean global methylation (%)`/100
 
-############## Making box plots of average methylation percentages ############## 
-### Need to have a dataframe that combines gill and foot subset information before making the plot ###
-meth_file<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/combined_tissue_meth_perc.csv")
+### Run GLMM ###
+library(glmmTMB)
+glm<-glmmTMB(`Pre-filtered mean global methylation (%)`~Tissue+`Origin site` + `Transplant site` + (1|Sample),  data=meth_prop_all, family=beta_family(link="logit"))
+summary(glm)
 
-### Loading libraries ###
-library(ggplot2)
-library(tidyr)
-library(dplyr)
-
-
-### data wrangling for plotting ###
-reshaped_meth_file <- meth_file  %>%
-  pivot_longer(
-    cols = c(Raw_perc, Filtered_perc),
-    names_to = "Percentage_Type",
-    values_to = "Percentage"
-  )
-
-Gill<-reshaped_meth_file %>% 
-  filter(tissue =="Gill",
-         Percentage_Type == "Filtered_perc")
-
-Foot<-reshaped_meth_file %>% 
-  filter(tissue =="Foot",
-         Percentage_Type == "Filtered_perc")
+glm_post<-glmmTMB(`Post-filtered mean global methylation (%)`~Tissue+`Origin site` + `Transplant site` + (1|Sample),  data=meth_prop_all, family=beta_family(link="logit"))
+summary(glm_post)
 
 
-### Plot average methylation percentage by tissue type ###
-ggplot(meth_file, aes(x = tissue, y = Raw_perc, fill = tissue)) + 
-  geom_boxplot() +
-  labs(
-    title = "",
-    x = "Tissue Type",
-    y = "Global Methylation Level (%)",
-    fill = "Tissue Type"
-  ) +
-  scale_fill_manual( values = c("Foot" = "#3bbdcc", "Gill" = "#e68d4e"))+
-  theme_classic() +
+### jitter with mean and SD ###
+p <- ggplot(meth_prop_all_pre, aes(x = `Transplant site`, y = `Pre-filtered mean global methylation (%)`, fill = Tissue)) + 
+  # Jittered points with custom appearance
+  geom_jitter( size = 8, alpha = 0.4, 
+               stroke = 0, shape = 21, 
+               position = position_jitterdodge(jitter.width = 0.1, jitter.height = 0, dodge.width = 0.6)) + 
+  # Adding mean and standard deviation as points with error bars
+  stat_summary(
+    aes(color = Tissue),  # Correctly map color to Tissue
+    fun.data = "mean_sdl", 
+    fun.args = list(mult = 1), 
+    geom = "pointrange", 
+    position = position_dodge(width = 0.6), 
+    size = 2,
+    shape=18,
+    alpha=0.9,
+    show.legend = FALSE
+  ) + 
+  facet_wrap(~`Origin site`) +  # Facet by site_type
+  theme(strip.text = element_text(size = 20, face = "bold"),  
+        strip.background = element_blank(),  # Removes the gray background
+        strip.placement = "outside")+
+  scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gill" = "#e68d4e")) +  # Custom fill colors for Tissue
+  scale_color_manual(values = c("Foot" = "#2c8e99", "Gill" = "#d4562a")) +  # Custom point color for Tissue
+  labs(y = "Methylation Proportion") +  # Axis labels and title
+  #scale_y_continuous(limits = c(0.1, 0.3)) + 
+  # Set y-axis limits from 0 to 1
+  theme_few() +  # Minimal theme
   theme(
-    strip.text = element_text(size = 12),
-    panel.grid = element_blank() # Remove background grid lines
-  )+theme(
-    strip.text = element_text(size = 14),         # Increase size of facet strip text
-    axis.text.x = element_text(size = 12), # Increase x-axis text size
-    axis.text.y = element_text(size = 12),       # Increase y-axis text size
-    axis.title = element_text(size = 14),        # Increase axis titles size
-    legend.text = element_text(size = 12),       # Increase legend text size
-    legend.title = element_text(size = 14),      # Increase legend title size
-    panel.grid = element_blank()                 # Remove background grid lines
-  )+geom_jitter(height=0)
+    strip.text = element_text(size = 20),  # Facet label size
+    axis.text = element_text(size = 20),   # Axis text size
+    axis.title = element_text(size = 20),  # Axis title size
+    legend.title = element_blank(),
+   legend.text = element_text(size = 20))
 
-
-
-
-### Facet by transplant and origin site ###
-
-meth_file_long <- meth_file %>%
-  pivot_longer(cols = c(origin_site, transplant_site),  
-               names_to = "site_type",                   
-               values_to = "site") 
-
-ggplot(meth_file_long, aes(x = site, y = Raw_perc, fill = tissue)) + 
-  geom_boxplot() +
-  facet_wrap(~ site_type, scales = "free_x") +  # Facet by site_type (either origin or transplant)
-  labs(
-    title = " ",
-    x = " ",
-    y = "Global Methylation Level (%) ",
-    fill = "Tissue Type"
-  ) +
-  scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gill" = "#e68d4e")) +  # Color mapping for tissue
-  theme_bw() + 
-  theme(
-    strip.text = element_text(size = 12),    # Increase facet title size
-    panel.grid = element_blank()  # Remove background grid lines
-  )+theme(
-    strip.text = element_text(size = 14),         # Increase size of facet strip text
-    axis.text.x = element_text(size = 12), # Increase x-axis text size
-    axis.text.y = element_text(size = 12),       # Increase y-axis text size
-    axis.title = element_text(size = 14),        # Increase axis titles size
-    legend.text = element_text(size = 12),       # Increase legend text size
-    legend.title = element_text(size = 14),      # Increase legend title size
-    panel.grid = element_blank()                 # Remove background grid lines
-  )+geom_jitter(height=0)
-
-
+# Print the plot
+print(p)
 
