@@ -123,9 +123,14 @@ lrt_trans_gill$table$sample <- rownames(lrt_trans_gill$table)
 all_CpG_dm <- rbind( lrt_origin_gill$table,
                      lrt_trans_gill$table )
 
+
 ### Saving DM sites for transplant site effect and origin site effect as new objects ###
-DM_Trans_gill<-all_CpG_dm %>% filter(Sig =="TRUE",Treat =="Transplant")
-DM_Origin_gill<-all_CpG_dm %>% filter(Sig =="TRUE", Treat =="Origin")
+DM_trans_gill<- lrt_trans_gill$table
+DM_origin_gill<- lrt_origin_gill$table
+
+DM_Trans_gill<-DM_trans_gill%>% filter(Sig =="TRUE",Treat =="Transplant")
+DM_Origin_gill<-DM_origin_gill %>% filter(Sig =="TRUE", Treat =="Origin")
+
 
 ### Origin site and transplant site associated DM CpG volcano plots ###
 gill_dff_meth<-ggplot( data = all_CpG_dm, aes(y = -log( as.numeric( FDR ) ), x = as.numeric( logFC ),
