@@ -124,8 +124,12 @@ all_CpG_dm <- rbind( lrt_origin_foot$table,
                      lrt_trans_foot$table )
 
 ### Saving DM sites for transplant site effect and origin site effect as new objects ###
-DM_Trans_foot<-all_CpG_dm %>% filter(Sig =="TRUE",Treat =="Transplant")
-DM_Origin_foot<-all_CpG_dm %>% filter(Sig =="TRUE", Treat =="Origin")
+DM_trans_foot<- lrt_trans_foot$table
+DM_origin_foot<- lrt_origin_foot$table
+
+DM_Trans_foot<-DM_trans_foot%>% filter(Sig =="TRUE",Treat =="Transplant")
+DM_Origin_foot<-DM_origin_foot %>% filter(Sig =="TRUE", Treat =="Origin")
+
 
 ### Origin site and transplant site associated DM CpG volcano plots ###
 foot_dff_meth<-ggplot( data = all_CpG_dm, aes(y = -log( as.numeric( FDR ) ), x = as.numeric( logFC ),
