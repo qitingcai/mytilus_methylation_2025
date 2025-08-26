@@ -1,0 +1,287 @@
+```{r}
+### Set working directory, include all (top5 for each treatments) foot coverage files ###
+setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot_final")
+
+### Load metadata file that include sample names, load all coverage files into R ###
+meta_data_foot<-read.delim("foot_final_metadata.txt", row.names = "sample", stringsAsFactors = FALSE)
+Sample_foot <- row.names(meta_data_foot)
+files_foot <- paste0(Sample_foot,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
+
+### EdgeR function readBismark2DGE reads all the files and collates the counts for all the sample into one data object ###
+yall <- readBismark2DGE(files_foot, sample.names=Sample_foot)
+
+### Check dimension and the count matrix ###
+dim(yall)
+head(yall$counts)
+
+### Save a data frame for downstream analyses ###
+yall_df<-as.data.frame(yall)
+
+### Sum up the counts of methylated and unmethylated reads to get the total read coverage at each CpG site for each sample ###
+Methylation <- gl(2, 1, ncol(yall), labels = c("Me", "Un"))
+Me <- yall$counts[ , Methylation == "Me" ]
+Un <- yall$counts[ , Methylation == "Un" ]
+Coverage <- Me + Un
+# Prefiltered total # of CpGs sequenced: colSums(Coverage > 0, na.rm = TRUE) 
+head(Coverage)
+
+### Calculating prefiltered genome-wide coverage - Replace zeros with NA so they're excluded in mean
+# Coverage[Coverage == 0] <- NA
+# # Compute mean per column, excluding NA (formerly zero)
+# mean_coverage <- colMeans(Coverage, na.rm = TRUE)
+# mean_coverage
+
+### Calculating average genome wide methylation percentage prefiltering
+# prop_meth_matrix_foot_prefilter <- Me /(Un+Me)
+# colMeans(prop_meth_matrix_foot_prefilter,na.rm=TRUE)*100
+
+## Calculating # of unique CpGs 
+# covered_per_cpg <- rowSums(Coverage > 0, na.rm = TRUE)
+# sum(covered_per_cpg > 0) # 1946085
+
+### Filtering to only include samples with a coverage of at least 3, for 66% of samples, total of 14 samples ###
+n=3
+keep_foot <- rowSums(Coverage >= n) >= 14
+table(keep_foot)
+
+### DGEList object is subsetted to retain only the filtered loci ###
+y_foot <- yall[keep_foot,, keep.lib.sizes=FALSE]
+
+### Normalization - set the library sizes for each sample to be the average of the total read counts for the methylated and unmethylated libraries ###
+TotalLibSize <- y_foot$samples$lib.size[Methylation=="Me"] +
+  +                 y_foot$samples$lib.size[Methylation=="Un"]
+y_foot$samples$lib.size <- rep(TotalLibSize, each=2)
+y_foot$samples
+
+### Compute the corresponding methylation summary from the methylated and unmethylated counts ###
+Me_foot <- y_foot$counts[, Methylation=="Me"]
+Un_foot <- y_foot$counts[, Methylation=="Un"]
+
+### Calculating prefiltered genome-wide coverage 
+# Coverage_postfilter<-Un_foot + Me_foot
+# Coverage_postfilter[Coverage_postfilter == 0] <- NA
+# mean_coverage_postfilter <- colMeans(Coverage_postfilter, na.rm = TRUE)
+# mean_coverage_postfilter 
+
+### Calculating a methylation proportion matrix
+prop_meth_matrix_foot <- Me_foot/(Me_foot+Un_foot)
+#Postfiltered total # of CpGs: colSums(!is.na(prop_meth_matrix_foot))
+
+# ### Calculating average genome wide methylation percentage postfiltering
+# colMeans(prop_meth_matrix_foot,na.rm=TRUE)*100
+
+```
+
+
+```{r}
+
+### We want to use the exposed site as reference level for both transplant and origin site effect analyses, need to relevel for transplant site effect ###
+meta_data_foot$transplant_site <- relevel(factor(meta_data_foot$transplant_site), ref = "exposed")
+meta_data_foot$origin_site <- relevel(factor(meta_data_foot$origin_site), ref = "exposed")
+
+meta_data_foot$scale_len <- scale(meta_data_foot$LENGTH_FINAL..mm.)
+
+### Create a design matrix, using origin site, transplant site, and final shell length as fixed effects ###
+designSL_foot <-
+  model.matrix( ~ 1 + origin_site * transplant_site + scale_len,
+                data = meta_data_foot)
+
+### Expand to the full design matrix modeling the sample and methylation effects ###
+design_foot <- modelMatrixMeth(designSL_foot)
+
+### Dispersion estimation ###
+y_foot <- estimateDisp(y_foot, design = design_foot, robust = TRUE)
+
+### Create the BCV plot for visualization ### 
+plotBCV(y_foot)
+
+### Testing for differentially methylated CpG loci ###
+
+### fit NB GLMs for all the CpG loci using the glmFit function in edgeR ###
+fit_foot <- glmFit(y_foot, design_foot)
+```
+
+
+```{r}
+
+###getting origin: transplant intearction
+interaction_terms <- grep("origin_site.*:transplant_site.*", colnames(fit_foot$design))
+
+lrt_foot_interaction <- glmLRT(fit_foot, coef = interaction_terms)
+summary( decideTests(lrt_foot_interaction) )
+plotMD(lrt_foot_interaction)
+
+
+
+#remove colons to reformat the names
+colnames(design_foot) <- make.names(colnames(design_foot))
+
+###Origin site effect####
+contr_origin_foot <- makeContrasts(Origin = origin_siteprotected, levels = design_foot)
+lrt_origin_foot <- glmLRT(fit_foot, contrast=contr_origin_foot)
+summary( decideTests(lrt_origin_foot) )
+plotMD(lrt_origin_foot)
+
+###Transplant effect ####
+contr_trans_foot <- makeContrasts(Transplant = transplant_siteprotected, levels = design_foot)
+lrt_trans_foot <- glmLRT(fit_foot, contrast=contr_trans_foot)
+summary( decideTests(lrt_trans_foot) )
+plotMD(lrt_trans_foot)
+
+
+## Wrangle data for volano plot of CpG diff meth
+# Correct p-values
+lrt_origin_foot$table$FDR <- p.adjust( lrt_origin_foot$table$PValue, method = "BH" )
+lrt_trans_foot$table$FDR <- p.adjust( lrt_trans_foot$table$PValue, method = "BH" )
+lrt_foot_interaction$table$FDR <- p.adjust( lrt_foot_interaction$table$PValue, method = "BH" )
+lrt_foot_interaction$table$FDR <- p.adjust(lrt_foot_interaction$table$PValue, method = "BH" )
+
+
+# Apply logical variable for significant DM
+lrt_origin_foot$table$Sig <- ifelse(lrt_origin_foot$table$FDR < 0.05, TRUE, FALSE )
+lrt_trans_foot$table$Sig <- ifelse(lrt_trans_foot$table$FDR < 0.05, TRUE, FALSE )
+lrt_foot_interaction$table$Sig <- ifelse(lrt_foot_interaction$table$FDR < 0.05, TRUE, FALSE )
+lrt_foot_interaction$table$Sig <- ifelse(lrt_foot_interaction$table$FDR < 0.05, TRUE, FALSE )
+
+# Apply binary variable for hyper/hypomethylation or "Up" vs "Down"
+lrt_origin_foot$table$Dir <- ifelse(lrt_origin_foot$table$logFC > 0, "Up", "Down" )
+lrt_trans_foot$table$Dir <- ifelse( lrt_trans_foot$table$logFC > 0, "Up", "Down" )
+lrt_foot_interaction$table$Dir <- ifelse( lrt_foot_interaction$table$logFC > 0, "Up", "Down" )
+lrt_foot_interaction$table$Dir <- ifelse(lrt_foot_interaction$table$logFC > 0, "Up", "Down")
+
+
+
+# Create combined term for significance and fold-change direction of diff meth
+lrt_origin_foot$table$Sig_Dir <- paste( lrt_origin_foot$table$Sig,
+                             lrt_origin_foot$table$Dir,
+                             sep = "_" )
+lrt_trans_foot$table$Sig_Dir <- paste( lrt_trans_foot$table$Sig,
+                             lrt_trans_foot$table$Dir,
+                             sep = "_" )
+lrt_foot_interaction$table$Sig_Dir <- paste( lrt_foot_interaction$table$Sig,
+                             lrt_foot_interaction$table$Dir,
+                             sep = "_" )
+lrt_foot_interaction$table$Sig_Dir <- paste( lrt_foot_interaction$table$Sig,
+                             lrt_foot_interaction$table$Dir,
+                             sep = "_" )
+
+
+# Create CpG ID and treatment variables
+lrt_origin_foot$table$Treat <- "Origin"
+lrt_trans_foot$table$Treat <- "Transplant"
+lrt_foot_interaction$table$Treat <- "Interaction"
+
+
+lrt_origin_foot$table$sample <- rownames(lrt_origin_foot$table)
+lrt_trans_foot$table$sample <- rownames(lrt_trans_foot$table)
+lrt_foot_interaction$table$sample <- rownames(lrt_foot_interaction$table)
+lrt_foot_interaction$table$sample <- rownames(lrt_foot_interaction$table)
+
+
+# Merge  coefficients
+all_CpG_dm <- rbind( lrt_origin_foot$table,
+                     lrt_trans_foot$table,
+                     lrt_foot_interaction$table)
+write_csv(all_CpG_dm, "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/foot_interaction_all_CpG_dm.csv")
+
+foot_all_CpG_dm<-rbind( lrt_origin_foot$table,
+                     lrt_trans_foot$table,
+                     lrt_foot_interaction$table)
+
+
+DM_Trans_foot<-all_CpG_dm %>% filter(Sig =="TRUE",Treat =="Transplant")
+DM_Origin_foot<-all_CpG_dm %>% filter(Sig =="TRUE", Treat =="Origin")
+DM_interaction_foot<-all_CpG_dm %>% filter(Sig =="TRUE", Treat =="Interaction")
+  
+DM_foot<-all_CpG_dm %>% filter(Sig =="TRUE", Treat =="Length")
+DM_interact_foot<-all_CpG_dm %>% filter(Sig =="TRUE", Treat =="Length_interact")
+
+#  volcano plots
+foot_dff_meth<-ggplot( data = all_CpG_dm, aes(y = -log(PValue), x = as.numeric( logFC ),
+                               color = Sig_Dir ) ) +
+    theme_classic(base_size = 40) +
+    geom_point(size=4, alpha =0.5, stroke=0) +
+    theme( legend.position = "none",
+           strip.background = element_blank() ) +
+    scale_color_manual( values = c( "black", "black", "blue", "red" ) ) +
+    facet_grid( Treat ~ . , scale = "free") +
+     labs(x = "log2FC", y = "-log p-value") +
+  theme(
+  axis.text.x = element_text(size = 12),
+  axis.ticks.x = element_line()
+)
+
+foot_dff_meth
+
+```
+
+
+```{r}
+library(patchwork)
+# Filter datasets
+plot_origin <- all_CpG_dm %>% filter(Treat == "Origin")
+plot_trans <- all_CpG_dm %>% filter(Treat == "Transplant")
+plot_interaction<- all_CpG_dm %>% filter(Treat == "Interaction")
+  
+  
+# Individual plots
+p1_foot <- ggplot(plot_trans, aes(x = logFC, y = -log10(PValue), color = Sig_Dir)) +
+  geom_point(size = 5, alpha =0.4, stroke=0) +
+  scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
+  labs(x = "", y = "-log10 p-value", title = "Transplant",color="black", size =28) +
+  theme_few(base_size = 28) +
+  theme(legend.position = "none",
+        plot.title = element_blank(),
+   axis.text = element_text(color = "black"),
+    axis.ticks = element_line(color = "black"),
+    axis.title = element_text(color = "black")
+   )
+
+p1_foot 
+
+p2_foot <- ggplot(plot_origin, aes(x = logFC, y = -log10(PValue), color = Sig_Dir))+
+  geom_point(size = 5, alpha =0.4,stroke=0) +
+  scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
+  labs(x = "", y = "-log10 p-value", title = "Origin", color="black", size =28) +
+  theme_few(base_size = 28) +
+  theme(legend.position = "none",
+        plot.title = element_blank(),
+   axis.text = element_text(color = "black"),
+    axis.ticks = element_line(color = "black"),
+    axis.title = element_text(color = "black"))
+p2_foot 
+
+p3_foot <- ggplot(plot_interaction, aes(x = logFC, y = -log10(PValue), color = Sig_Dir))+
+  geom_point(size = 5, alpha =0.4,stroke=0) +
+  scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
+  labs(x = "log2FC", y = "-log10 p-value", title = "Interaction", color="black", size =28) +
+  theme_few(base_size = 28) +
+  theme(legend.position = "none",
+        plot.title = element_blank(),
+   axis.text = element_text(color = "black"),
+    axis.ticks = element_line(color = "black"),
+    axis.title = element_text(color = "black"))
+
+p3_foot
+
+
+common_xlim <- c(-15, 15)
+common_ylim <- c(0, 12)
+# aspect_ratio_value <- 0.6  # Adjust this value as needed (1 means square)
+
+
+p1_foot <- p1_foot + coord_cartesian(xlim = common_xlim, ylim = common_ylim)
+p2_foot <- p2_foot + coord_cartesian(xlim = common_xlim, ylim = common_ylim)
+p3_foot <- p3_foot + coord_cartesian(xlim = common_xlim, ylim = common_ylim)
+
+# Stack vertically with shared layout
+foot_volcano<-p2_foot / p1_foot / p3_foot  # This uses patchwork
+foot_volcano
+
+#ggsave("foot_volcano_interaction.png", foot_volcano, width = 10, height = 12, dpi = 300)
+
+
+print(foot_volcano + plot_layout(heights = c(1, 1, 1)))  # ensure equal height per row
+
+
+```

@@ -1,27 +1,24 @@
 ### foot specific ###
 ############ Differential Methylation Analysis ############
 
-  ```{r setup, include=FALSE}
-  ### Load libraries ###
-  library(vegan)
-  library(edgeR)
-  library(tidyverse)
-  library(SYNCSA)
-  library(mice)
-  library(ape)
-  library(rtracklayer)
-  library(genomation)
-  library(plyranges)
-  library(GenomicRanges)
-  library(lme4)
-```
+### Load libraries ###
+library(vegan)
+library(edgeR)
+library(tidyverse)
+library(SYNCSA)
+library(mice)
+library(ape)
+library(rtracklayer)
+library(genomation)
+library(plyranges)
+library(GenomicRanges)
+library(lme4)
 
-```{r}
 ### Set working directory, include all (top5 for each treatments) foot coverage files ###
-setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot_final")
+setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot")
 
 ### Load metadata file that include sample names, load all coverage files into R ###
-meta_data_foot<-read.delim("foot_final_metadata.txt", row.names = "sample", stringsAsFactors = FALSE)
+meta_data_foot<-read.delim("foot_metadata.txt", row.names = "sample", stringsAsFactors = FALSE) 
 Sample_foot <- row.names(meta_data_foot)
 files_foot <- paste0(Sample_foot,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
 
@@ -54,7 +51,7 @@ y_foot <- yall[keep_foot,, keep.lib.sizes=FALSE]
 TotalLibSize <- y_foot$samples$lib.size[Methylation=="Me"] +
   +                 y_foot$samples$lib.size[Methylation=="Un"]
 y_foot$samples$lib.size <- rep(TotalLibSize, each=2)
-y_foot$samples
+ y_foot$samples
 
 ### Compute the corresponding methylation summary from the methylated and unmethylated counts ###
 Me_foot <- y_foot$counts[, Methylation=="Me"]
@@ -69,7 +66,7 @@ meta_data_foot$transplant_site<- relevel(factor(meta_data_foot$transplant_site),
 ### Create a design matrix, using origin site, transplant site, and final shell length as fixed effects ###
 designSL_foot <- model.matrix(~0+ origin_site + transplant_site +
                            LENGTH_FINAL..mm., 
-                           data=meta_data_foot)
+                         data=meta_data_foot)
 
 ### Expand to the full design matrix modeling the sample and methylation effects ###
 design_foot <- modelMatrixMeth(designSL_foot)
@@ -77,7 +74,7 @@ design_foot <- modelMatrixMeth(designSL_foot)
 ### Dispersion estimation ###
 y_foot <- estimateDisp(y_foot, design = design_foot, robust = TRUE)
 
-### Create the BCV plot for visualization ### 
+### Create the BCV plot ### 
 plotBCV(y_foot)
 
 ### Testing for differentially methylated CpG loci ###
@@ -86,7 +83,6 @@ plotBCV(y_foot)
 fit_foot <- glmFit(y_foot, design_foot)
 
 ### Testing for differentially methylated CpG sites between different treatment groups using likelihood ratio tests ###
-
 ### Origin site effects ###
 contr_origin_foot <- makeContrasts(Origin = origin_siteprotected-origin_siteexposed, levels = design_foot)
 lrt_origin_foot <- glmLRT(fit_foot, contrast=contr_origin_foot)
@@ -136,10 +132,10 @@ DM_Origin_foot<-DM_origin_foot %>% filter(Sig =="TRUE", Treat =="Origin")
 
 
 ### Origin site and transplant site associated DM CpG volcano plots ###
-foot_dff_meth<-ggplot( data = all_CpG_dm, aes(y = -log(PValue), x = as.numeric(logFC),
+foot_dff_meth<-ggplot( data = all_CpG_dm, aes(y = -log( as.numeric( FDR ) ), x = as.numeric( logFC ),
                                color = Sig_Dir ) ) +
     theme_classic(base_size = 40) +
-    geom_point(size=4,alpha =0.5, stroke=0) +
+    geom_point(size=4) +
     theme( legend.position = "none",
            strip.background = element_blank() ) +
     scale_color_manual( values = c( "black", "black", "blue", "red" ) ) +
@@ -149,13 +145,7 @@ foot_dff_meth<-ggplot( data = all_CpG_dm, aes(y = -log(PValue), x = as.numeric(l
 foot_dff_meth
 
 #write.csv(all_CpG_dm, "all_CpG_dm_foot_output.csv")
-```
 
-
-
-
-
-```
 ### Find genomics regions that each (DM) CpG falls into ###
 ### Read in intron annotated gff, see Preprocess_00/add_intron.sh for code for intron annotation ###
 gff_intron<-read.gff("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/new_genomic_intron.gff")
@@ -361,7 +351,7 @@ interg_subset <- CpGs_foot[-overlapping_indices]
 interg_subset_df_foot <- as.data.frame(interg_subset) %>% mutate(gene_id =NA)
 interg_subset_df_foot$combined <- paste(interg_subset_df_foot$seqnames, interg_subset_df_foot$start, sep = "-")
 interg_subset_df_foot_Grange<-makeGRangesFromDataFrame(interg_subset_df_foot)
-```
+
 
 ############ Running GLM to assess the probability of getting more methylated sites in certain genomic features ############
 
