@@ -1,6 +1,7 @@
 ### gill specific ###
 ############ Differential Methylation Analysis ############
 
+```{r setup, include=FALSE}
 ### Load libraries ###
 library(vegan)
 library(edgeR)
@@ -13,17 +14,25 @@ library(genomation)
 library(plyranges)
 library(GenomicRanges)
 library(lme4)
+library(emmeans)
+library(ggthemes)
+```
 
+```{r}
 ### Set working directory, include all (top5 for each treatments) gill coverage files ###
 setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/gill")
 
 ### Load metadata file that include sample names, load all coverage files into R ###
-meta_data_gill<-read.delim("gill_metadata.txt", row.names = "sample", stringsAsFactors = FALSE) 
+meta_data_gill<-read.delim("gill_metadata.txt", row.names = "sample", stringsAsFactors = FALSE)
 Sample_gill <- row.names(meta_data_gill)
 files_gill <- paste0(Sample_gill,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
 
 ### EdgeR function readBismark2DGE reads all the files and collates the counts for all the sample into one data object ###
 yall <- readBismark2DGE(files_gill, sample.names=Sample_gill)
+
+### Check dimension and the count matrix ###
+dim(yall)
+head(yall$counts)
 
 ### Save a data frame for downstream analyses ###
 yall_df<-as.data.frame(yall)
@@ -33,7 +42,22 @@ Methylation <- gl(2, 1, ncol(yall), labels = c("Me", "Un"))
 Me <- yall$counts[ , Methylation == "Me" ]
 Un <- yall$counts[ , Methylation == "Un" ]
 Coverage <- Me + Un
+# Prefiltered total # of CpGs sequenced: colSums(Coverage > 0, na.rm = TRUE) 
 head(Coverage)
+
+### Calculating prefiltered genome-wide coverage - Replace zeros with NA so they're excluded in mean
+# Coverage[Coverage == 0] <- NA
+# # Compute mean per column, excluding NA (formerly zero)
+# mean_coverage <- colMeans(Coverage, na.rm = TRUE)
+# mean_coverage
+
+### Calculating average genome wide methylation percentage prefiltering
+# prop_meth_matrix_gill_prefilter <- Me /(Un+Me)
+# colMeans(prop_meth_matrix_gill_prefilter,na.rm=TRUE)*100
+
+## Calculating # of unique CpGs 
+# covered_per_cpg <- rowSums(Coverage > 0, na.rm = TRUE)
+# sum(covered_per_cpg > 0) # 1946085
 
 ### Filtering to only include samples with a coverage of at least 3, for 66% of samples, total of 14 samples ###
 n=3
@@ -47,22 +71,38 @@ y_gill <- yall[keep_gill,, keep.lib.sizes=FALSE]
 TotalLibSize <- y_gill$samples$lib.size[Methylation=="Me"] +
   +                 y_gill$samples$lib.size[Methylation=="Un"]
 y_gill$samples$lib.size <- rep(TotalLibSize, each=2)
- y_gill$samples
+y_gill$samples
 
 ### Compute the corresponding methylation summary from the methylated and unmethylated counts ###
 Me_gill <- y_gill$counts[, Methylation=="Me"]
 Un_gill <- y_gill$counts[, Methylation=="Un"]
 
-### Calculating a methylation proportion matrix ###
+### Calculating prefiltered genome-wide coverage 
+# Coverage_postfilter<-Un_gill + Me_gill
+# Coverage_postfilter[Coverage_postfilter == 0] <- NA
+# mean_coverage_postfilter <- colMeans(Coverage_postfilter, na.rm = TRUE)
+# mean_coverage_postfilter 
+
+### Calculating a methylation proportion matrix
 prop_meth_matrix_gill <- Me_gill/(Me_gill+Un_gill)
+#Postfiltered total # of CpGs: colSums(!is.na(prop_meth_matrix_gill))
+
+# ### Calculating average genome wide methylation percentage postfiltering
+# colMeans(prop_meth_matrix_gill,na.rm=TRUE)*100
+
+```
+
+
+```{r}
 
 ### We want to use the exposed site as reference level for both transplant and origin site effect analyses, need to relevel for transplant site effect ###
-meta_data_gill$transplant_site<- relevel(factor(meta_data_gill$transplant_site), ref = "exposed")
+meta_data_gill$transplant_site <- relevel(factor(meta_data_gill$transplant_site), ref = "exposed")
+meta_data_gill$origin_site <- relevel(factor(meta_data_gill$origin_site), ref = "exposed")
 
 ### Create a design matrix, using origin site, transplant site, and final shell length as fixed effects ###
-designSL_gill <- model.matrix(~0+ origin_site + transplant_site +
+designSL_gill <- model.matrix(~0 + origin_site + transplant_site +
                            LENGTH_FINAL..mm., 
-                         data=meta_data_gill)
+                           data=meta_data_gill)
 
 ### Expand to the full design matrix modeling the sample and methylation effects ###
 design_gill <- modelMatrixMeth(designSL_gill)
@@ -70,9 +110,8 @@ design_gill <- modelMatrixMeth(designSL_gill)
 ### Dispersion estimation ###
 y_gill <- estimateDisp(y_gill, design = design_gill, robust = TRUE)
 
-### Create the BCV plot ### 
+### Create the BCV plot for visualization ### 
 plotBCV(y_gill)
-
 
 ### Testing for differentially methylated CpG loci ###
 
@@ -80,8 +119,9 @@ plotBCV(y_gill)
 fit_gill <- glmFit(y_gill, design_gill)
 
 ### Testing for differentially methylated CpG sites between different treatment groups using likelihood ratio tests ###
+
 ### Origin site effects ###
- contr_origin_gill <- makeContrasts(Origin = origin_siteprotected-origin_siteexposed, levels = design_gill)
+contr_origin_gill <- makeContrasts(Origin = origin_siteprotected-origin_siteexposed, levels = design_gill)
 lrt_origin_gill <- glmLRT(fit_gill, contrast=contr_origin_gill)
 summary( decideTests(lrt_origin_gill) )
 
@@ -90,78 +130,152 @@ contr_trans_gill <- makeContrasts(Transplant = transplant_siteprotected, levels 
 lrt_trans_gill <- glmLRT(fit_gill, contrast=contr_trans_gill)
 summary( decideTests(lrt_trans_gill) )
 
+### Length effect ###
+contr_length_gill <- makeContrasts(Origin = LENGTH_FINAL..mm., levels = design_gill)
+lrt_length_gill <- glmLRT(fit_gill, contrast=contr_length_gill)
+summary( decideTests(lrt_length_gill) )
 
 ### Wrangle data for generating volano plot of CpG DM ###
 ### Correct p-values using BH method ###
 lrt_origin_gill$table$FDR <- p.adjust( lrt_origin_gill$table$PValue, method = "BH" )
 lrt_trans_gill$table$FDR <- p.adjust( lrt_trans_gill$table$PValue, method = "BH" )
+lrt_length_gill$table$FDR <- p.adjust( lrt_length_gill$table$PValue, method = "BH" )
 
-# Apply logical variable for significant DM ###
+### Apply logical variable for significant DM ###
 lrt_origin_gill$table$Sig <- ifelse(lrt_origin_gill$table$FDR< 0.05, TRUE, FALSE )
 lrt_trans_gill$table$Sig <- ifelse(lrt_trans_gill$table$FDR< 0.05, TRUE, FALSE )
+lrt_length_gill$table$Sig <- ifelse(lrt_length_gill$table$FDR < 0.05, TRUE, FALSE )
 
-# Apply binary variable for hyper/hypomethylation or "Up" vs "Down" ###
+### Apply binary variable for hyper/hypomethylation or "Up" vs "Down" ###
 lrt_origin_gill$table$Dir <- ifelse(lrt_origin_gill$table$logFC > 0, "Up", "Down" )
 lrt_trans_gill$table$Dir <- ifelse( lrt_trans_gill$table$logFC > 0, "Up", "Down" )
+lrt_length_gill$table$Dir <- ifelse(lrt_length_gill$table$logFC > 0, "Up", "Down")
 
-# Create combined term for significance and fold-change direction of diff meth ###
+### Create combined term for significance and fold-change direction of diff meth ###
 lrt_origin_gill$table$Sig_Dir <- paste( lrt_origin_gill$table$Sig,
                              lrt_origin_gill$table$Dir,
                              sep = "_" )
 lrt_trans_gill$table$Sig_Dir <- paste( lrt_trans_gill$table$Sig,
                              lrt_trans_gill$table$Dir,
                              sep = "_" )
+lrt_length_gill$table$Sig_Dir <- paste( lrt_length_gill$table$Sig,
+                             lrt_length_gill$table$Dir,
+                             sep = "_" )
 
 ### Create CpG ID and treatment variables ###
 lrt_origin_gill$table$Treat <- "Origin"
 lrt_trans_gill$table$Treat <- "Transplant"
+lrt_length_gill$table$Treat <- "Length"
 
 lrt_origin_gill$table$sample <- rownames(lrt_origin_gill$table)
 lrt_trans_gill$table$sample <- rownames(lrt_trans_gill$table)
+lrt_length_gill$table$sample <- rownames(lrt_length_gill$table)
+
+
+### Run Wilcoxon test to see if there's any skewness of DM 
+wilcox.test(lrt_trans_gill$table$logFC, mu = 0, alternative = "less")  
+wilcox.test(lrt_trans_gill$table$logFC, mu = 0, alternative = "greater")   #p-value < 2.2e-16
+
+wilcox.test(lrt_origin_gill$table$logFC, mu = 0, alternative = "less") #p-value < 2.2e-16
+wilcox.test(lrt_origin_gill$table$logFC, mu = 0, alternative = "greater")  
 
 ### Merge origin site and transplant site coefficients ###
-all_CpG_dm <- rbind( lrt_origin_gill$table,
+all_CpG_dm_gill <- rbind( lrt_origin_gill$table,
                      lrt_trans_gill$table )
 
+## with length effect
+all_CpG_dm_length <- rbind( lrt_origin_gill$table,
+                     lrt_trans_gill$table,
+                     lrt_length_gill$table)
+
+## Getting a full table of unique CpGs for plotting the relationship of all log2FC between gill and gill!!!
+
+# transplant_cpg_gill<- all_CpG_dm_gill%>%
+#   filter(Treat=="Transplant")
+ # write_csv(all_CpG_dm_gill_gill,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/gill_unique_all_CpG.csv")
+# 
 
 ### Saving DM sites for transplant site effect and origin site effect as new objects ###
 DM_trans_gill<- lrt_trans_gill$table
 DM_origin_gill<- lrt_origin_gill$table
+DM_length_gill<- lrt_length_gill$table
 
 DM_Trans_gill<-DM_trans_gill%>% filter(Sig =="TRUE",Treat =="Transplant")
 DM_Origin_gill<-DM_origin_gill %>% filter(Sig =="TRUE", Treat =="Origin")
+DM_length_gill<-DM_length_gill%>% filter(Sig =="TRUE", Treat =="Length")
 
 
-### Origin site and transplant site associated DM CpG volcano plots ###
-gill_dff_meth<-ggplot( data = all_CpG_dm, aes(y = -log( as.numeric( FDR ) ), x = as.numeric( logFC ),
-                               color = Sig_Dir ) ) +
-    geom_point(size=4) +
-    theme_classic( base_size = 40 ) +
-    theme( legend.position = "none",
-           strip.background = element_blank() ) +
-    scale_color_manual( values = c( "black", "black", "blue", "red" ) ) +
-    facet_grid( Treat ~ . , scale = "free") +
-    labs( x = "Gill", y = "-log p-value" )
 
-gill_dff_meth
 
-#write.csv(all_CpG_dm, "all_CpG_dm_gill_output.csv")
+####### For plotting ########
 
+library(patchwork)
+# Filter datasets
+plot_origin <- all_CpG_dm_gill %>% filter(Treat == "Origin")
+plot_trans <- all_CpG_dm_gill %>% filter(Treat == "Transplant")
+  
+# Individual plots
+p1_gill <- ggplot(plot_trans, aes(x = logFC, y = -log10(PValue), color = Sig_Dir)) +
+  geom_point(size = 8, alpha =0.4, stroke=0) +
+  scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
+  labs(x = "log2FC", y = "", title = "Transplant",color="black") +
+  theme_few(base_size = 28) +
+  theme(legend.position = "none",
+        plot.title = element_blank(),
+   axis.text = element_text(color = "black"),
+    axis.ticks = element_line(color = "black"),
+    axis.title = element_text(color = "black")
+   )
+
+p1_gill 
+
+p2_gill <- ggplot(plot_origin, aes(x = logFC, y = -log10(PValue), color = Sig_Dir))+
+  geom_point(size = 8, alpha =0.4,stroke=0) +
+  scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
+  labs(x = "", y = "", title = "Origin", color="black") +
+  theme_few(base_size = 28) +
+  theme(legend.position = "none",
+        plot.title = element_blank(),
+   axis.text = element_text(color = "black"),
+    axis.ticks = element_line(color = "black"),
+    axis.title = element_text(color = "black"))
+p2_gill 
+
+common_xlim <- c(-12, 12)
+common_ylim <- c(0, 10)
+
+# aspect_ratio_value <- 0.6  # Adjust this value as needed (1 means square)
+
+p1_gill <- p1_gill + coord_cartesian(xlim = common_xlim, ylim = common_ylim)
+p2_gill <- p2_gill + coord_cartesian(xlim = common_xlim, ylim = common_ylim)
+
+# Stack vertically with shared layout
+gill_volcano<-p2_gill / p1_gill  # This uses patchwork
+gill_volcano
+
+#ggsave("gill_volcano.png", gill_volcano, width = 10, height = 12, dpi = 300)
+
+```
+
+
+
+```{r}
 ### Find genomics regions that each (DM) CpG falls into ###
 ### Read in intron annotated gff, see Preprocess_00/add_intron.sh for code for intron annotation ###
 gff_intron<-read.gff("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/new_genomic_intron.gff")
 
 ### Convert the gff object to a GRanges object using the gffToGRanges() function of the R package genomation ###
-all_GRange<-gffToGRanges("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/new_genomic_intron.gff", filter = NULL, zero.based = FALSE, ensembl = FALSE)
+all_GRange<-gffToGRanges("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/new_genomic_intron.gff", filter = NULL, zero.based = FALSE, ensembl = FALSE) 
 
 ### Divide the annotation GRanges object into different objects filtered for exons and introns ###
 exon_GRange<-all_GRange %>% 
   filter(type == c
          ("exon"))
+
 intron_GRange<-all_GRange %>% 
   filter(type == c
-         ("intron"))
-
+         ("intron")) 
+         
 ### Code to find PROMOTER REGIONS: defined as 1kb downstream or upstream of first exons of all genes ###
 
 ### Separate positive and negative strand of all exons ###
@@ -172,12 +286,12 @@ exon_neg_strand <- exon_GRange %>% filter(strand == "-")
 ### For positive strands, get the first exons by extracting the smallest start position with slice_min ###
 first_exon_pos <- as.data.frame(exon_pos_strand) %>% 
   group_by(gene) %>% 
-  slice_min(order_by = start, n = 1, with_ties =FALSE) #Only return one exon when there are overlapping first exons
+  slice_min(order_by = start, n = 1, with_ties =FALSE) # Only return one when there are overlapping first exons to avoid duplicates
 
 ### For negative strands, extract the first exons using the largest start position with slice_max, (going from right to left) ###
 first_exon_neg <- as.data.frame(exon_neg_strand) %>% 
   group_by(gene) %>% 
-  slice_max(order_by = start, n = 1, with_ties =FALSE) #
+  slice_max(order_by = start, n = 1, with_ties =FALSE)
 
 ### Combine both positive and negative strand first exons ###
 first_exon_GRange <- bind_rows(first_exon_pos, first_exon_neg)
@@ -185,12 +299,15 @@ first_exon_GRange <- bind_rows(first_exon_pos, first_exon_neg)
 ### Remove potential duplicated lines ###
 first_exon_GRange <- first_exon_GRange %>% distinct()
 
+### Create a dataframe ###
+first_exon_GRange_df<-as.data.frame(first_exon_GRange)
+
 ### Create new GRange object with only first exons ###
 first_exon_GRange <- GRanges(
   seqnames = Rle(first_exon_GRange$seqnames),
   ranges = IRanges(start = first_exon_GRange$start, end = first_exon_GRange$end),
   strand = first_exon_GRange$strand,
-  gene_id =first_exon_GRange$gene
+  gene_id = first_exon_GRange$gene # genes assigned to promoters are those that are associated with the first exons
 )
 
 ### For some first exons start site <1000, 1kb upstream returns negative values, adjust length that the exons with start position less than 1000 has a start site of 1  
@@ -200,23 +317,22 @@ adjusted_start <- ifelse(strand(first_exon_GRange) == "+",
                          start(first_exon_GRange) - 1001,  # Positive strand: promoter starts from upstream 1kb, not counting the first position of exon
                          end(first_exon_GRange)+1)    # Negative strand: end of first exon (from left to right), add 1 to avoid overlap with exon
 
-
 ### Ensure the adjusted start positions are not less than 1 ###
 adjusted_start <- pmax(adjusted_start, 1)
 
 # Adjust end positions for promoters based on strand and start conditions
 adjusted_end <- ifelse(
   strand(first_exon_GRange) == "+" & start(first_exon_GRange) == 1,
-  1000,  # If positive strand and start is 1, max end at 1000, only for cases where first exon starts at position <1000
+  1000,  # If positive strand and start is 1, end at 1000
   ifelse(
     strand(first_exon_GRange) == "+",
-    start(first_exon_GRange) - 1,  # For positive strand, end before the first position of first exon
-    end(first_exon_GRange)+1001  # For negative strand, end 1000bp downstream of the end of first exon, going from left to right
+    start(first_exon_GRange) - 1,  # For positive strand, end 1 bp before the first exon to avoid overlap
+    end(first_exon_GRange)+1001  # For negative strand, end 1000 downstream of first exon
   )
 )
 
 ### Create the GRanges object for promoter regions ###
-promoters_Grange <- GRanges(
+promoters_Grange<- GRanges(
   seqnames = seqnames(first_exon_GRange),
   ranges = IRanges(
     start = adjusted_start,
@@ -230,45 +346,44 @@ promoters_Grange <- GRanges(
 promoters_Grange_df<-as.data.frame(promoters_Grange)
 
 
-
 ### Convert a data frame of coordinates of CpGs to a GRange object using the function makeGRangesFromDataFrame() of the R package GenomicRanges ###
-
 
 #### Use prop_meth_matrix from above, extract first rows as all the CpG positions across samples ###
 prop_meth_matrix_gill <- as.data.frame(prop_meth_matrix_gill)
 
 ### Reformating ###
-prop_meth_matrix_gill <- prop_meth_matrix_gill %>%
- rownames_to_column(var = "name") #make the rows become first column
+prop_meth_matrix_gill_new <- prop_meth_matrix_gill %>%
+  rownames_to_column(var = "name") #change row names to column called name
 
-CpGs_gill <- prop_meth_matrix_gill  %>%
-  separate(col = 1, into = c("seqid", "start"), sep = "-") #reformatting the CpG location identifiers
+CpGs_gill <- prop_meth_matrix_gill_new  %>%
+  separate(col = 1, into = c("seqid", "start"), sep = "-") #separating chromosome, start site information
 
 CpGs_gill$start<-as.numeric(CpGs_gill$start)
 
 CpGs_gill<-CpGs_gill %>% 
-  mutate(start = start + 1,
-         end = start +1) #changing from 0 to 1 base for cpg positions, because the annotation files are 1 base, but the output from bismark is 0 base
+  mutate(start= start+1,
+         end =start+1)  #changing from 0 to 1 base format because the annotation file is 1 base, but the coverage files are 0 base format.
 
 ### Reorder columns to place 'end' in the third column for easier viewing ###
 CpGs_gill <- CpGs_gill[, c(1, 2, ncol(CpGs_gill), 3:(ncol(CpGs_gill)-1))]
 
 ### Make cpg a GRange object for all CpG sites ###
 CpGs_gill<-makeGRangesFromDataFrame(CpGs_gill)
+df_cpg_gill<-as.data.frame(CpGs_gill) ### save a new dataframe for all CpGs ###
 
 ### Subsetting CpG GRange objects according to genic features ###
 ### Exon subset ###
 exon_subset_gill<-subsetByOverlaps(CpGs_gill, exon_GRange)
+#exon_subset<-as.data.frame(exon_subset) 
 
 ### Adding gene id to each entry ###
 exon_gff <- subset(all_GRange, type == "exon") #need to be GRange object to subset
-mcols(exon_gff)
 exon_id_overlaps_gill <- findOverlaps(exon_subset_gill, exon_gff)
 
 ### Extract gene_id for matching exons from the GFF file ###
 gene_ids_gill <- mcols(exon_gff)$gene[subjectHits(exon_id_overlaps_gill)]
 query_hits_gill <- queryHits(exon_id_overlaps_gill)
-# Add gene_id only to those rows in exon_subset that have corresponding overlaps
+# Add gene_id only to those rows in exon_subset that have corresponding gene overlaps
 
 ### Initialize with NA for those rows that have no gene overlap ###
 exon_subset_gene_id_gill <- rep(NA, length(exon_subset_gill))
@@ -280,10 +395,11 @@ mcols(exon_subset_gill)$gene_id <- exon_subset_gene_id_gill
 exon_subset_gene_id_df_gill<-as.data.frame(exon_subset_gill)
 exon_subset_gene_id_df_gill$combined <- paste(exon_subset_gene_id_df_gill$seqnames, exon_subset_gene_id_df_gill$start, sep = "-") #reformat
 
-
 ### Intron subset ###
 intron_subset_gill<-subsetByOverlaps(CpGs_gill, intron_GRange)
-#adding gene id
+#intron_subset_gill<-as.data.frame(intron_subset_gill) 
+
+### Adding gene id ###
 intron_gff <- subset(all_GRange, type == "intron") #need to be GRange object to subset
 mcols(intron_gff)
 intron_id_overlaps_gill <- findOverlaps(intron_subset_gill, intron_gff)
@@ -291,7 +407,6 @@ intron_id_overlaps_gill <- findOverlaps(intron_subset_gill, intron_gff)
 ### Extract gene_id for matching exons from the GFF file ###
 gene_ids_gill<- mcols(intron_gff)$gene[subjectHits(intron_id_overlaps_gill)]
 query_hits <- queryHits(intron_id_overlaps_gill)
-
 
 ### Add gene_id only to those rows in exon_subset that have corresponding overlaps ###
 ### Initialize with NA for those rows that have no overlap ###
@@ -307,11 +422,13 @@ intron_subset_gene_id_df_gill$combined <- paste(intron_subset_gene_id_df_gill$se
 
 ### Find promoter overlaps with CpG using the adjusted ranges ###
 promoter_GRange_gill <- findOverlaps(CpGs_gill, promoters_Grange)
+
 promoter_subset_gill<-subsetByOverlaps(CpGs_gill, promoters_Grange)
+promoter_subset_gill_df<-as.data.frame(promoter_subset_gill) 
 
 
 ### Adding gene id ###
-promoter_gff <- promoters_Grange #need to be GRange object to subset
+promoter_gff <- promoters_Grange # need to be GRange object to subset
 promoter_id_overlaps_gill <- findOverlaps(promoter_subset_gill, promoter_gff)
 
 ### Extract gene_id for matching promoter region (genes associated with first exons, see above, from the GFF file ###
@@ -347,13 +464,14 @@ interg_subset <- CpGs_gill[-overlapping_indices]
 ### Convert to data frame and make a Grange Object, genes are NAs ###
 interg_subset_df_gill <- as.data.frame(interg_subset) %>% mutate(gene_id =NA)
 interg_subset_df_gill$combined <- paste(interg_subset_df_gill$seqnames, interg_subset_df_gill$start, sep = "-")
+interg_subset_df_gill_Grange<-makeGRangesFromDataFrame(interg_subset_df_gill)
+```
 
 
+```{r}
 ############ Running GLM to assess the probability of getting more methylated sites in certain genomic features ############
 
-
 ### Add 1 to all CpG loci to convert positions to 0 base to 1 base format ###
-
 CpGsite_gill<-as.data.frame(y_gill) %>% 
   dplyr::select(Chr, Locus) %>% 
   mutate(Meth=0,
@@ -364,14 +482,14 @@ DM_Trans_gill<- separate(DM_Trans_gill, sample, into = c("Chr", "Locus"), sep = 
 
 ### DM CpG subset associated with transplant site effect derived before, need to convert to 1 base format too ###
 transDM_gill<-DM_Trans_gill%>% 
- mutate(Locus =as.numeric(Locus)+1)
+ mutate(Locus = as.numeric(Locus)+1)
 
 #### Creating a dataframe with all the CpG sites, the ones that are differentially methylated with transplant site were "1" and nonmeth are "0" ###
 df_trans <- CpGsite_gill %>%
   left_join(transDM_gill, by = c("Chr", "Locus")) %>%
   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
   dplyr::select(Chr,Locus, Meth)
-
+  
 ### Adding genic features to the dataframe for each site ###
 
 intron_subset_gill<-intron_subset_gene_id_df_gill %>% 
@@ -381,7 +499,7 @@ exon_subset_gill<-exon_subset_gene_id_df_gill %>%
   mutate(feature = "exon") #5645 obs
 
 intergenic_subset_gill<-interg_subset_df_gill %>% 
-  mutate(feature = "interg") #43382 obs
+  mutate(feature = "interg") #43382 obs (this number includes overlap with promoter regions)
 
 promoter_subset_gill<-promoter_subset_gene_id_df_gill %>% 
   mutate(feature = "promoter") #1990 obs
@@ -409,35 +527,38 @@ na.omit()
 ### Combining all the CpG subsets ###
 df_CpGsite_gill_all <- bind_rows(exon, intron, intergenic, promoter)
 
-### Adding methylation information to the dataframe ###
-df_combined_gill_transplant <- df_trans%>% 
+### Adding methylation information for gill transplant to the dataframe ###
+df_combined_gill_trans <- df_trans%>% 
   full_join(df_CpGsite_gill_all , by =c("Chr","Locus")) %>% 
-  dplyr::select(-Meth.y) 
+  select(-Meth.y) 
 
 ### Remove intergenic regions that overlap with promoter regions ###
-df_combined_gill_transplant<-df_combined_gill_transplant%>% 
+  df_combined_gill_trans<-df_combined_gill_trans%>% 
     group_by(Chr, Locus) %>%
  filter(!(any(feature == "promoter") & feature == "interg")) %>%
-  ungroup()
+  ungroup() #intergenic count: 41859
 
 ### Running GLMM to test the effect of genomic feature on DM pattern (0 or 1) ###
-
-### If a CpG falls into intergenic region, it does not have a gene ID and would be "intergenic"
-df_combined_gill_transplant_df <-    df_combined_gill_transplant %>%
+### If a CpG falls into intergenic region, it does not have a gene ID and would be "intergenic" 
+   df_combined_gill_trans_df <- df_combined_gill_trans%>%
   mutate(gene_id = ifelse(is.na(gene_id), "intergenic", gene_id))
 
-df_combined_gill_transplant_df$feature <-
-  as.factor(df_combined_gill_transplant_df$feature)
+   df_combined_gill_trans_df$feature <-
+  as.factor(df_combined_gill_trans_df$feature)
+   
+### Filter for DM CpGs
+   df_combined_gill_trans_df_DM <-df_combined_gill_trans_df %>% 
+     filter(Meth.x==1)
 
-glmer<-glmer(Meth.x ~ feature + (1 | gene_id), data = df_combined_gill_transplant_df, family = binomial(link = "logit"))
+glmer <- glmer(Meth.x ~ feature + (1 | gene_id), data =  df_combined_gill_trans_df, family = binomial(link = "logit"))
 summary(glmer)
-
 car::Anova(glmer, type ="III",test.statistic="Chisq")
- 
-emmeans(glmer, pairwise ~ feature)
+
+#pairwise comparison
+emmeans(glmer, pairwise ~ feature, type="response")
 
 ### DM CpGs associated with origin site effect, separating columns into chromosome and locus ###
-DM_Origin_gill<- separate(DM_Origin_gill, sample, into = c("Chr", "Locus"), sep = "-")
+DM_Origin_gill <- separate(DM_Origin_gill, sample, into = c("Chr", "Locus"), sep = "-")
 
 ### Change loci to 0 base to 1 base ###
 originDM_gill<-DM_Origin_gill%>% 
@@ -447,39 +568,251 @@ originDM_gill<-DM_Origin_gill%>%
 df_origin <- CpGsite_gill %>%
   left_join(originDM_gill, by = c("Chr", "Locus")) %>%
   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
-  dplyr::select(Chr,Locus, Meth)
+  select(Chr,Locus, Meth)
 
-df_combined_gill_origin <- df_origin%>% 
+df_combined_gill_origin <- df_origin %>% 
   full_join(df_CpGsite_gill_all , by =c("Chr","Locus")) %>% 
-  dplyr::select(-Meth.y) 
-
+  select(-Meth.y) 
 
 ### Remove intergenic regions that overlap with promoter regions ###
-df_combined_gill_origin <-df_combined_gill_origin %>% 
+df_combined_gill_origin <- df_combined_gill_origin%>% 
     group_by(Chr, Locus) %>%
  filter(!(any(feature == "promoter") & feature == "interg")) %>%
   ungroup()
 
-### Running GLMM to test the effect of genomic feature on DM pattern (0 or 1) ###
+### Running GLMM to test the effect of feature on DM pattern (0 or 1) ###
 
 ### If a CpG falls into intergenic region, it does not have a gene ID and would be "intergenic"
-
-  df_combined_gill_origin_df <-  df_combined_gill_origin%>%
+df_combined_gill_origin_df <- df_combined_gill_origin %>%
   mutate(gene_id = ifelse(is.na(gene_id), "intergenic", gene_id))
 
-  df_combined_gill_origin_df$feature <-
+df_combined_gill_origin_df$feature <-
   as.factor(df_combined_gill_origin_df$feature)
-   
- glmer<-glmer(Meth.x ~ feature + (1 | gene_id), data =  df_combined_gill_origin_df, family = binomial(link = "logit"))
- 
- summary(glmer)
- car::Anova(glmer, type ="III",test.statistic="Chisq")
- emmeans(glmer, pairwise ~ feature)
+
+### Filter for DM CpGs
+df_combined_gill_origin_df_DM <-df_combined_gill_origin_df %>% 
+     filter(Meth.x==1) 
+
+glmer <-glmer(Meth.x ~ feature + (1 | gene_id),
+              data =  df_combined_gill_origin_df, 
+              family = binomial(link = "logit"))
+summary(glmer)
+car::Anova(glmer, type = "III", test.statistic = "Chisq")
+
+emmeans(glmer, pairwise ~ feature, type="response")
+
+## getting length associated DM CpG information
+
+### DM CpGs associated with length effect, separating columns into chromosome and locus ###
+DM_length_gill <- separate(DM_length_gill, sample, into = c("Chr", "Locus"), sep = "-")
+
+### Change loci to 0 base to 1 base ###
+lengthDM_gill<-DM_length_gill %>% 
+mutate(Locus =as.numeric(Locus)+1)
+
+### Adding methylation information for the CpGs, methylated as 1 and unmethylated as 0 ###
+df_length <- CpGsite_gill %>%
+  left_join(lengthDM_gill, by = c("Chr", "Locus")) %>%
+  mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
+  select(Chr,Locus, Meth)
+
+df_combined_gill_length <- df_length %>% 
+  full_join(df_CpGsite_gill_all , by =c("Chr","Locus")) %>% 
+  select(-Meth.y) 
+
+### Remove intergenic regions that overlap with promoter regions ###
+  df_combined_gill_length <- df_combined_gill_length%>% 
+    group_by(Chr, Locus) %>%
+ filter(!(any(feature == "promoter") & feature == "interg")) %>%
+  ungroup() 
+
+### If a CpG falls into intergenic region, it does not have a gene ID and would be "intergenic"
+df_combined_gill_length_df <- df_combined_gill_length %>%
+  mutate(gene_id = ifelse(is.na(gene_id), "intergenic", gene_id))  
+
+### Filter for DM CpGs
+df_combined_gill_length_DM <- df_combined_gill_length_df %>% 
+     filter(Meth.x==1) 
 
 
+```
+
+
+```{r}
+
+### Generating table S5 results, DMs associated with features, lfc and GO term information ###
+
+origin_gene_unique <- df_combined_gill_origin %>% filter(Meth.x==1)
+transplant_gene_unique <- df_combined_gill_trans %>% filter(Meth.x==1)
+length_gene_unique <- df_combined_gill_length %>% filter(Meth.x==1)
+
+#add logfold change info to the DM sites
+updated_transplant_gene_unique <- transplant_gene_unique %>% 
+  left_join(transDM_gill, by = c("Chr","Locus"))
+colnames(updated_transplant_gene_unique)[colnames(updated_transplant_gene_unique) == "logFC"] <- "transplant_logFC"
+
+updated_origin_gene_unique <- origin_gene_unique %>% 
+  left_join(originDM_gill, by = c("Chr","Locus")) 
+colnames(updated_origin_gene_unique)[colnames(updated_origin_gene_unique) == "logFC"] <- "origin_logFC"
+
+updated_length_gene_unique <- length_gene_unique %>% 
+  left_join(lengthDM_gill, by = c("Chr","Locus")) 
+colnames(updated_length_gene_unique)[colnames(updated_length_gene_unique) == "logFC"] <- "length_logFC"
+
+
+gene<-gff_intron %>% 
+  filter(type == "gene")
+
+gff_gene_clean <- gene %>%
+  separate(attributes, into = c("ID", "Dbxref", "Name", "Description", "Other"), sep = ";", fill = "right") %>%
+  mutate(across(everything(), ~ gsub(".*=", "", .))) %>%  # Remove 'key=' part from each value
+dplyr::select(Name, Description, start, end)
+
+#want to have gene names, then add the gff_gene_clean data
+updated_origin_gene_unique <-left_join(updated_origin_gene_unique ,
+                                         gff_gene_clean,
+                                         by=c("gene_id"="Name"))
+updated_transplant_gene_unique  <-left_join(updated_transplant_gene_unique ,
+                                         gff_gene_clean,
+                                         by=c("gene_id"="Name"))
+updated_length_gene_unique  <-left_join(updated_length_gene_unique ,
+                                         gff_gene_clean,
+                                         by=c("gene_id"="Name"))
+
+####updated_transplant_gene_unique & updated_origin_gene_unique have all the information of the DM sites, want to see what GO terms those genes were related to.
+
+gene_transplant<-as.data.frame(unique(updated_transplant_gene_unique$gene_id) %>% 
+                             na.omit())
+gene_transplant$gene_id<-gene_transplant$`unique(updated_transplant_gene_unique$gene_id) %>% na.omit()`
+
+
+# # load go terms data
+go_terms<-
+  read.delim(
+    "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/gene ontology/GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf",
+    header = FALSE,
+    sep = "\t",
+    # Specify tab delimiter
+    comment.char = "!",
+    # GAF files have comment lines starting with "!"
+    stringsAsFactors = FALSE
+  )  %>% # Avoid converting strings to factors)
+  dplyr::select(-V11, -V16, -V17)
+
+# Rename columns
+colnames(go_terms) <- c("DB", "DB_Object_ID", "gene_id", "Qualifier",
+                         "GO_ID", "GO_Term", "Aspect", "DB_Object_Name",
+                         "Type", "DB_Object_Type", "Category","Taxon",
+                         "V13","V14")
+
+#transplant effect
+
+DMgene_goterm <- gene_transplant %>%
+  left_join(go_terms, by = "gene_id") %>%
+  group_by(gene_id) %>%
+  summarize(GO_terms = list(unique(GO_ID)), .groups = "drop")
+
+DMgene_goterm_flat <- DMgene_goterm %>%
+  mutate(across(where(is.list), ~ sapply(., paste, collapse = ";")))
+
+#left joint updated_transplant_gene_unique and the DMgene_goterm_flat to add go term info
+updated_transplant_gene_unique <- updated_transplant_gene_unique %>% 
+  left_join(DMgene_goterm_flat,
+            by = "gene_id")
+
+#write.csv(updated_transplant_gene_unique, "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/DMgene_goterm_transplant_gill.csv", row.names = FALSE)
+######
+
+
+## Origin site effect
+gene_origin<-as.data.frame(unique(updated_origin_gene_unique$gene_id) %>% 
+                             na.omit())
+gene_origin$gene_id<-gene_origin$`unique(updated_origin_gene_unique$gene_id) %>% na.omit()`
+DMgene_goterm <- gene_origin %>%
+  left_join(go_terms, by = "gene_id") %>%
+  group_by(gene_id) %>%
+  summarize(GO_terms = list(unique(GO_ID)), .groups = "drop")
+
+DMgene_goterm_flat <- DMgene_goterm %>%
+  mutate(across(where(is.list), ~ sapply(., paste, collapse = ";")))
+
+updated_origin_gene_unique <- updated_origin_gene_unique %>% 
+  left_join(DMgene_goterm_flat,
+            by = "gene_id")
+
+#write.csv(updated_origin_gene_unique, "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/DMgene_goterm_origin_gill.csv", row.names = FALSE)
+
+###length effect
+
+gene_length<-as.data.frame(unique(updated_length_gene_unique$gene_id) %>% 
+                             na.omit())
+gene_length$gene_id<-gene_length$`unique(updated_length_gene_unique$gene_id) %>% na.omit()`
+
+DMgene_goterm <- gene_length %>%
+  left_join(go_terms, by = "gene_id") %>%
+  group_by(gene_id) %>%
+  summarize(GO_terms = list(unique(GO_ID)), .groups = "drop")
+
+DMgene_goterm_flat <- DMgene_goterm %>%
+  mutate(across(where(is.list), ~ sapply(., paste, collapse = ";")))
+
+updated_length_gene_unique <- updated_length_gene_unique %>% 
+  left_join(DMgene_goterm_flat,
+            by = "gene_id")
+
+#write.csv(updated_length_gene_unique, "DMgene_goterm_length_gill.csv", row.names = FALSE)
+
+#look at how many DM CpGs were shared between transplant and origin site effect
+origin_combined <- unique(updated_origin_gene_unique$combined)
+transplant_combined <- unique(updated_transplant_gene_unique$combined)
+shared_combined <- intersect(origin_combined, transplant_combined)
+# Count how many are shared
+length(shared_combined)
+#56
+
+
+#### Making input file for glm ###
+# Ensure all three data frames have the same column names
+colnames(updated_origin_gene_unique) <- colnames(updated_transplant_gene_unique)
+#colnames(updated_transplant_gene_unique) <- colnames(updated_length_gene_unique)
+merged_all_DM_gill <- rbind(
+                    updated_origin_gene_unique,
+                    updated_transplant_gene_unique)
+
+unique(merged_all_DM_gill$gene_id)
+
+#look at whether strengh of DM differ between the two effects in gill
+trans_origin_compar_gill<-lmer(abs(transplant_logFC)~Treat+(1|gene_id),merged_all_DM_gill)
+summary(trans_origin_compar_gill)
+
+# write_csv(merged_all_DM_gill,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/merged_all_DM_gill.csv")
+# 
+average_lfc_DM_trans_gill<-updated_transplant_gene_unique %>%
+  group_by(gene_id) %>%
+  summarize(mean = mean(transplant_logFC))%>%
+  na.omit()
+
+average_lfc_DM_origin_gill<-updated_origin_gene_unique %>%
+  group_by(gene_id) %>%
+  summarize(mean = mean(transplant_logFC))%>%
+  na.omit()
+
+ # write_csv(average_lfc_DM_trans_gill,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/MethylMussel_GO/GO_MWU/average_lfc_DM_gill_trans.csv")
+ # 
+ #  write_csv(average_lfc_DM_origin_gill,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/MethylMussel_GO/GO_MWU/average_lfc_DM_gill_origin.csv")
+# 
+
+
+
+
+```
+
+
+
+```{r}
 
 ############ GO Enrichment analysis ############
-
+library(goseq)
 ### Load in GO terms, downloaded from NCBI ###
 go_terms<-
   read.delim(
@@ -494,31 +827,52 @@ go_terms<-
   dplyr::select(-V11, -V16, -V17)
 
 ### Changing column names ###
-colnames(go_terms) <- c("DB", "DB_Object_ID", "gene_id", "Qualifier", 
+  colnames(go_terms) <- c("DB", "DB_Object_ID", "gene_id", "Qualifier", 
                          "GO_ID", "GO_Term", "Aspect", "DB_Object_Name", 
                          "Type", "DB_Object_Type", "Category","Taxon", 
-                         "V13","V14")
+                         "V13","V14") 
 
 ### Changing DM CpG to 1 base format ###
-transDM_gill<- DM_Trans_gill %>% 
-  mutate(Locus = as.numeric(Locus)+1) 
+transDM_gill<-DM_Trans_gill %>% 
+  mutate(Locus=as.numeric(Locus)+1)
 
 originDM_gill<- DM_Origin_gill %>% 
-  mutate(Locus = as.numeric(Locus)+1) 
+  mutate(Locus=as.numeric(Locus)+1)
 
 ### Creating a dataframe with genomic feature & DM methylation classification, keep only entres with genes ###
 df_trans_all_fix <- df_CpGsite_gill_all %>%
-  left_join(transDM_gill, by = c("Chr", "Locus")) %>%
+  left_join(originDM_gill, by = c("Chr", "Locus")) %>%
   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
-  select(Chr,Locus, Meth,gene_id) %>%  # Removing intergenic features that do not correspond with a gene
+  dplyr::select(Chr,Locus, Meth,gene_id,feature) %>%  # Removing intergenic features that do not correspond with a gene
   na.omit()
 
-### Origin site effect DM, rerun with joint originDM_gill
+### code for origin site effect ###
 # df_trans_all_fix <- df_CpGsite_gill_all %>%
- # left_join(originDM_gill, by = c("Chr", "Locus")) %>%
-  # mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
-  # select(Chr,Locus, Meth,gene_id) %>%  # Removing intergenic features that do not correspond with a gene
-  # na.omit()
+#   left_join(originDM_gill, by = c("Chr", "Locus")) %>%
+#   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
+#   dplyr::select(Chr,Locus, Meth,gene_id,feature) %>%  
+#   na.omit()
+
+### Extracting all DM CpGs ###
+  DM_direc <- df_trans_all_fix %>%
+  filter(Meth == 1) %>%
+  na.omit()
+
+### Extracting DM CpGs associated with both transplant and origin site effect ###
+transplant_feature<-df_combined_gill_trans %>% filter(Meth.x ==1)%>%
+  na.omit()
+
+origin_feature<-df_combined_gill_origin %>% filter(Meth.x ==1)%>%
+  na.omit()
+
+
+DM_direc_origin<-left_join(DM_direc,
+                           origin_feature,
+                           by=c("gene_id","Locus","Chr"))
+
+DM_direc_transplant<-left_join(DM_direc,
+                            transplant_feature,
+                            by=c("gene_id","Locus","Chr"))
 
 
 ### Matching genes with go terms ###
@@ -533,8 +887,9 @@ cpg_per_gene<-go_gill_trans_dm  %>%
   na.omit()
 
 ### Extract unique gene IDs from GO terms ###
-gene_id<-go_gill_trans_dm %>% select(gene_id) %>% 
+gene_id<-go_gill_trans_dm %>% dplyr::select(gene_id) %>% 
   distinct()
+
 
 ### Filter out genes that have CpG coverage less than 3, save as cpg_sites_bias ###
 cpg_sites_bias<- gene_id %>%
@@ -543,7 +898,7 @@ cpg_sites_bias<- gene_id %>%
 
 ### GO Matching category file, which contains gene IDs and their corresponding GO IDs ###
 category_file<-go_gill_trans_dm %>% 
-  select(gene_id, GO_ID) %>% 
+  dplyr::select(gene_id, GO_ID) %>% 
   distinct()%>%
   filter(gene_id %in% cpg_sites_bias$gene_id)%>% 
    distinct(gene_id, GO_ID)
@@ -553,13 +908,15 @@ category_file<-go_gill_trans_dm %>%
 
 ### Loading libraries ###
 library(GO.db)
-library(AnnotationDbi)  
+library(AnnotationDbi) 
 
 ### Extract all the unique GO terms from category list ###
 go_terms_cat <- unique(category_file$GO_ID)
-go_info <- AnnotationDbi::select(GO.db, keys = go_terms_cat, columns = c("ONTOLOGY", "TERM"))
 
 ### Extract ontology for each GO terms ###
+go_info <- AnnotationDbi::select(GO.db, keys = go_terms_cat, columns = c("ONTOLOGY", "TERM"))
+
+### Creating separate dataframe to store BP, MF, CC GO terms ###
 bp<- go_info %>% 
   filter(ONTOLOGY == "BP") 
 mf<-go_info %>% 
@@ -567,14 +924,13 @@ mf<-go_info %>%
 cc<-go_info %>% 
   filter(ONTOLOGY == "CC")
 
-
 ### BIOLOGICAL PROCESS ###
 # Initialize a list to store parent terms
 parent_terms <- list()
 
 # Loop through each GO term and get the parent
 for (go in bp$GOID) {
-  # Attempt to retrieve the parent term
+  # Attempt to retrieve the parent term (one level up)
   parent <- as.character(GO.db::GOBPPARENTS[[go]])
   
   # Debugging output
@@ -589,7 +945,8 @@ for (go in bp$GOID) {
 BP_parent_terms_df <- data.frame(
   GO_Term = rep(bp$GOID, sapply(parent_terms, length)),
   Parent_Term = unlist(parent_terms, use.names = FALSE),
-  stringsAsFactors = FALSE) %>%  mutate(Ontology ="BP")
+  stringsAsFactors = FALSE) %>% 
+  mutate(Ontology ="BP")
 
 
 ### CELLULAR COMPONENT ###
@@ -617,6 +974,7 @@ CC_parent_terms_df <- data.frame(
   mutate(Ontology ="CC")
 
 
+  
 ### MOLECULAR FUNCTION ###
 # Initialize a list to store parent terms
 parent_terms <- list()
@@ -638,9 +996,7 @@ for (go in mf$GOID) {
 MF_parent_terms_df <- data.frame(
   GO_Term = rep(mf$GOID, sapply(parent_terms, length)),
   Parent_Term = unlist(parent_terms, use.names = FALSE),
-  stringsAsFactors = FALSE
-) %>% 
-  mutate(Ontology ="MF")
+  stringsAsFactors = FALSE) %>% mutate(Ontology ="MF")
 
 
 ### Combine the BP, MF, CC data frames into one ###
@@ -653,45 +1009,58 @@ category_file_parent<-category_file %>%
 
 ############################################################
 
-
 ### Only keep GO terms with at least 3 genes ###
 gene_go_parent<-category_file_parent %>%
   group_by(Parent_Term) %>%
-summarise(gene_count = n_distinct(gene_id)) %>%
+summarise(gene_count = n_distinct(gene_id)) %>% ###IMPORTANT CHANGE: change to n_distinct
   filter(gene_count >= 3)
 
 ### Removing old GO terms, only including the parental GO terms ###
 category_list_prep_parent <- gene_go_parent %>%
-  left_join(category_file_parent, by = "Parent_Term") #go terms
+  left_join(category_file_parent, by = "Parent_Term") %>% 
+  dplyr::select(-GO_ID)%>% 
+   distinct(Parent_Term, gene_id, .keep_all = TRUE)
 
 ### Filtering out CpsG, include only those included in cpg_sites_bias (See above, only include genes with with at least 3 CpG coverage) ###
-category_list <- category_list_prep_parent %>%  
+category_list <- cpg_sites_bias %>% 
+  left_join(category_list_prep_parent, by = "gene_id") %>%  # Keep only genes in cpg_sites_bias
+  na.omit() %>% 
   group_by(gene_id) %>%
   summarise(GO_ID = list(unique(Parent_Term)), .groups = 'drop') %>%  # Drop grouping afterwards
   deframe()
 
-### The input bias correction file, which contains the gene id and the number of CpGs for that gene ### 
-cpg_sites_bias_parent<- category_list_prep_parent %>% 
+
+# Build 2-col gene parent mapping
+gene2cat_df <- category_file_parent %>%         # (gene_id, GO_ID, Parent_Term) from your code
+  filter(!is.na(Parent_Term)) %>%
+  count(Parent_Term, name = "gene_count") %>%
+  filter(gene_count >= 3) %>%
+  dplyr::select(Parent_Term) %>%
+  inner_join(category_file_parent, by = "Parent_Term") %>%
+  transmute(gene = as.character(gene_id),
+                   category = as.character(Parent_Term)) %>%
+  distinct()
+
+
+### The input bias correction file, which contains the gene id and the number of CpGs for that gene ###
+cpg_sites_bias_parent<- category_list_prep_parent  %>% 
   left_join(cpg_sites_bias, by ="gene_id") %>% 
-  dplyr::select(gene_id, unique_locus_count) %>% 
+   dplyr::select(gene_id, unique_locus_count) %>% 
     distinct(gene_id, unique_locus_count) 
 
-
 ### Reformat bias correction file to vector format ###
-
 cpg_vector <- setNames(cpg_sites_bias_parent$unique_locus_count,
                           cpg_sites_bias_parent$gene_id)
-
 
 ### Create dataframe with gene id, CpG count for each locus, methylation information, and GO annotations ###
 go_gill_trans_dm_parent <- cpg_sites_bias_parent %>% 
   left_join(go_gill_trans_dm, by ="gene_id")
 
-
+  
 ### Separating unmethylated and methylated CpGs ###
-DMG<-go_gill_trans_dm_parent %>% 
+DMG<-go_gill_trans_dm_parent%>% 
   filter(Meth ==1) %>% 
-  dplyr::select(gene_id, GO_ID) %>% 
+   dplyr::select(gene_id, GO_ID) %>% 
   distinct()
 
 UD<-go_gill_trans_dm_parent %>% 
@@ -700,54 +1069,191 @@ UD<-go_gill_trans_dm_parent %>%
   distinct()
 
 ### extract DM and Unmeth gene ID ###
-de_genes <- DMG$gene_id
+dm_genes <- DMG$gene_id
 ud_genes <- UD$gene_id
 
-
 ### Combine all genes into a single vector ###
-all_genes <- union(de_genes, ud_genes)
+all_genes <- union(dm_genes, ud_genes)
 
-### Create a named vector with DM genes as 1 and non-DM genes as 0 ###
-gene_vector <- setNames(
-  as.integer(all_genes %in% de_genes),
-  all_genes
-)
+# Start with everything as 0
+gene_vector <- setNames(rep(0, length(all_genes)), all_genes)
 
+# Overwrite DM genes as 1
+gene_vector[dm_genes] <- 1
+
+table(gene_vector) 
+
+
+# Enforce identical universe & order
+common_ids <- Reduce(intersect, list(names(gene_vector), names(cpg_vector), gene2cat_df$gene))
+gene_vector <- gene_vector[common_ids]
+cpg_vector  <- cpg_vector[common_ids]
+gene2cat_df <- filter(gene2cat_df, gene %in% common_ids)
+
+
+### Running GO enrichment analysis with bias data ###
 pwf <- nullp(gene_vector, bias.data=cpg_vector, plot.fit =FALSE)
 head(pwf)
 
 plotPWF(pwf = pwf, binsize = 200) 
 
-GO.wall <- goseq(pwf, gene2cat = category_list, method = "Wallenius", use_genes_without_cat = FALSE)
+GO.wall <- goseq(pwf, gene2cat = gene2cat_df, method = "Wallenius", use_genes_without_cat = FALSE)
+# adjust each direction separately
+GO.wall$padj_over  <- p.adjust(GO.wall$over_represented_pvalue,  method = "BH")
+GO.wall$padj_under <- p.adjust(GO.wall$under_represented_pvalue, method = "BH")
 
 overrep_go<-GO.wall %>% filter(over_represented_pvalue<0.05)
- enriched_go_ids <- overrep_go$category
+enriched_go_ids <- overrep_go$category
 
  ### FDR corrected ###
- enriched.GO <- GO.wall$category[p.adjust(GO.wall$over_represented_pvalue, method = "BH" ) < .05]
- head(enriched.GO) #character(0)
+enriched.GO <- GO.wall$category[p.adjust(GO.wall$over_represented_pvalue, method = "BH" ) < 0.05]
+ head(enriched.GO)
+ #character(0)
+ 
+ write_csv(GO.wall, "goseq_origin.csv")
+
+```
 
 
-### prep for GOMWU test analyses ###
+```{r}
 
-gff_gene_clean <- gene %>%
-  separate(attributes, into = c("ID", "Dbxref", "Name", "Description", "Other"), sep = ";", fill = "right") %>%
-  mutate(across(everything(), ~ gsub(".*=", "", .))) %>%  # Remove 'key=' part from each value
-dplyr::select(Name, Description)
-  
+#prep for GOMU test
+
+all_CpG_dm_gill$Chr <- sapply(strsplit(as.character(all_CpG_dm_gill$sample), "-"), `[`, 1)  # Part before '-'
+all_CpG_dm_gill$Locus <- sapply(strsplit(as.character(all_CpG_dm_gill$sample), "-"), `[`, 2)
+all_CpG_dm_gill$Locus<-as.numeric(all_CpG_dm_gill$Locus)+1
+
+
+origin_gene_unique_all <- all_CpG_dm_gill %>% 
+  filter(Treat=="Origin")
+
+transplant_gene_unique_all <- all_CpG_dm_gill %>% 
+  filter(Treat=="Transplant")
+
+
+#add logfold change info to the DM sites
+updated_transplant_gene_unique_all <- df_combined_gill_trans  %>% 
+  left_join(transplant_gene_unique_all, by = c("Chr","Locus"))
+colnames(updated_transplant_gene_unique_all)[colnames(updated_transplant_gene_unique_all) == "logFC"] <- "transplant_logFC"
+
+updated_origin_gene_unique_all <- df_combined_gill_origin %>% 
+  left_join(origin_gene_unique_all, by = c("Chr","Locus")) 
+colnames(updated_origin_gene_unique_all)[colnames(updated_origin_gene_unique_all) == "logFC"] <- "origin_logFC"
+
+
 #want to have gene names, then add the gff_gene_clean data
-gene_name_DMsites_gill_origin<-left_join(df_combined_gill_origin,
+updated_origin_gene_unique_all <-left_join(updated_origin_gene_unique_all ,
                                          gff_gene_clean,
-                                         by=c("gene_id"="Name")) %>% 
-  dplyr::select(Chr, Meth.x, Locus,  gene_id, feature, Description)
-#write_csv(gene_name_DMsites_gill_origin,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/GO Enrichment/gene_name_DMsites_gill_origin_corrected.csv")
-
-gene_name_DMsites_gill_transplant<-left_join(df_combined_gill_transplant,
+                                         by=c("gene_id"="Name"))
+updated_transplant_gene_unique_all  <-left_join(updated_transplant_gene_unique_all ,
                                          gff_gene_clean,
-                                         by=c("gene_id"="Name")) %>% 
-  dplyr::select(Chr, Meth.x, Locus,  gene_id, feature, Description)
-#write_csv(gene_name_DMsites_gill_transplant,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/GO Enrichment/gene_name_DMsites_gill_transplant_corrected.csv")
+                                         by=c("gene_id"="Name"))
+
+####updated_transplant_gene_unique & updated_origin_gene_unique have all the information of the DM sites, want to see what GO terms those genes were related to.
+
+gene_transplant_all<-as.data.frame(unique(updated_transplant_gene_unique_all$gene_id) %>% 
+                             na.omit())
+gene_transplant_all$gene_id<-gene_transplant_all$`unique(updated_transplant_gene_unique_all$gene_id) %>% na.omit()`
 
 
 
+#transplant effect
+
+DMgene_goterm_all <- gene_transplant_all %>%
+  left_join(go_terms, by = "gene_id") %>%
+  group_by(gene_id) %>%
+  summarize(GO_terms = list(unique(GO_ID)), .groups = "drop")
+
+DMgene_goterm_flat_all <- DMgene_goterm_all %>%
+  mutate(across(where(is.list), ~ sapply(., paste, collapse = ";")))
+
+
+#left joint updated_transplant_gene_unique and the DMgene_goterm_flat to add go term info
+updated_transplant_gene_unique_all<- updated_transplant_gene_unique_all %>% 
+  left_join(DMgene_goterm_flat_all,
+            by = "gene_id")
+
+#write.csv(updated_transplant_gene_unique_gill, "DMgene_goterm_transplant_gill.csv", row.names = FALSE)
+######
+
+
+## Origin site effect
+gene_origin_all<-as.data.frame(unique(updated_origin_gene_unique_all$gene_id) %>% 
+                             na.omit())
+gene_origin_all$gene_id<-gene_origin_all$`unique(updated_origin_gene_unique_all$gene_id) %>% na.omit()`
+DMgene_goterm_all <- gene_origin_all %>%
+  left_join(go_terms, by = "gene_id") %>%
+  group_by(gene_id) %>%
+  summarize(GO_terms = list(unique(GO_ID)), .groups = "drop")
+
+DMgene_goterm_flat_all <- DMgene_goterm_all %>%
+  mutate(across(where(is.list), ~ sapply(., paste, collapse = ";")))
+
+updated_origin_gene_unique_all <- updated_origin_gene_unique_all %>% 
+  left_join(DMgene_goterm_flat_all,
+            by = "gene_id")
+
+#write.csv(updated_origin_gene_unique, "DMgene_goterm_origin_gill.csv", row.names = FALSE)
+
+## Getting average LFC  ###
+average_lfg_gill_origin<-updated_origin_gene_unique_all %>% 
+  group_by(gene_id) %>% 
+  summarize(mean=mean(origin_logFC)) %>% 
+  na.omit()
+
+average_lfg_gill_transplant<-updated_transplant_gene_unique_all %>% 
+  group_by(gene_id) %>% 
+  summarize(mean=mean(transplant_logFC)) %>% 
+  na.omit()
+
+
+go_gill_df <- category_list_prep_parent %>% group_by(gene_id) %>%
+  summarise(GO = paste(unique(Parent_Term), collapse = ";"), .groups = "drop")
+
+
+### Average LFC after applying filtering threshold ###
+
+lfg_gene_gill_origin_filtered<-updated_origin_gene_unique_all %>% 
+  filter(gene_id %in% go_gill_df$gene_id)
+
+average_lfg_gill_origin_filtered<-lfg_gene_gill_origin_filtered%>% 
+  group_by(gene_id) %>% 
+  summarize(mean=mean(origin_logFC)) %>% 
+  na.omit()
+
+lfg_gene_gill_transplant_filtered<-updated_transplant_gene_unique_all %>% 
+  filter(gene_id %in% go_gill_df$gene_id)
+
+average_lfg_gill_transplant_filtered<-lfg_gene_gill_transplant_filtered %>% 
+  group_by(gene_id) %>% 
+  summarize(mean=mean(transplant_logFC)) %>% 
+  na.omit()
+
+
+#save tye average log fold change values per gene
+
+# write_csv(average_lfg_gill_transplant_filtered,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/MethylMussel_GO/GO_MWU/average_lfg_gill_transplant_filtered_no_interaction.csv")
+# 
+# write_csv(average_lfg_gill_origin_filtered,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/MethylMussel_GO/GO_MWU/average_lfg_gill_origin_filtered_no_interaction.csv")
+
+
+# ## saving the matching GO term and gene file ###
+# write_csv(category_list_prep_parent,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/MethylMussel_GO/GO_MWU/go_gene_matching.csv")
+
+go_gill_df <-category_list_prep_parent %>%
+  group_by(gene_id) %>%
+  summarise(GO = paste(unique(Parent_Term), collapse = ";"), .groups = "drop")
+
+# write.table(
+#   go_gill_df,
+#   "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/MethylMussel_GO/GO_MWU/GO_gill_df.tab",
+#   row.names = FALSE,
+#   sep = "\t",
+#   quote = FALSE,
+#   col.names = FALSE
+# )
+# 
+
+
+```
 
