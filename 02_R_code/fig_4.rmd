@@ -1,3 +1,5 @@
+#### Aim of this script: code to make Figure 4 in the main text, as well as code for testing correlation of overall log2FC values between the two tissues ###
+
 library(VennDiagram)
 library(grid)
 
@@ -146,12 +148,6 @@ transplant_cor
 
 # ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/transplant_cor_foot_gill.png",transplant_cor, height = 4, width=5)
 
-cor_test <- cor.test(merged_no_outlier$Foot_Origin, merged_no_outlier$Foot_Origin, method = "pearson")
-cor_test
-
-cor_test <- cor.test(merged_no_outlier$Foot_Transplant, merged_no_outlier$Gill_Transplant, method = "pearson")
-cor_test
-
 # Scatterplot: Foot vs Gill for Origin
 origin_cor<-ggplot(merged, aes(x = Gill_Origin, y = Foot_Origin)) +
   geom_point(alpha = 0.5, color = "black", size =1.3, stroke = 0) +
@@ -175,6 +171,9 @@ origin_cor
 # ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/origin_cor_foot_gill.png",origin_cor, height =8, width=12)
 
 
+
+
+### Test if there's any correlation in all log2FC of CpGs between tissues ###
 cor_test <- cor.test(merged$Foot_Origin, merged$Gill_Origin, method = "pearson")
 cor_test
 
