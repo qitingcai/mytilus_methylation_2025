@@ -1,10 +1,5 @@
 ### Aim of this script: make bar plots that shows the proportion of CpGs or DM CpGs that fall into each genomic feature ###
 
-### plot showing proportions of DM CpGs falling into each genomic features ###
-# dm_bar_plot<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot_final/dm_genic_feature.csv")
-
-
-##updated file with interaction term rerun
 
 dm_bar_plot<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/fisher_test_input_final.csv")
 
@@ -16,12 +11,13 @@ custom_colors <- c(
   "Intron" = "#0662AE",
   "Exon" = "#ABCDE9",
   "Promoter" = "#1F3161",
-  "Intergenic" = "#3792D0"
+  "Intergenic" = "#3792D0",
+  "UTR"="#d8e0e6"
 )
 
 library("ggthemes")
-
 library(dplyr)
+
 
 # Create a new row for the "Total" feature in each group
 total_bars <- dm_bar_plot %>%
@@ -39,259 +35,143 @@ total_bars <- dm_bar_plot %>%
   )
 
 
-
-# # Plot the data
-ggplot(dm_bar_plot, aes(x = Type, y = DM_proportion, fill = feature)) +
-  geom_bar(stat = "identity", position = "fill") +
-  facet_wrap(~tissue) +
-  scale_y_continuous(labels = scales::percent_format()) +
-  scale_fill_manual(values = custom_colors, drop = FALSE) +  # Ensures all colors show
-  labs(
-    title = "",
-    y = "Proportion (%)",
-    x = "",
-    fill = "Feature"
-  ) +
-  theme_few()
-
-
-
-
-foot<-dm_bar_plot %>% 
-  filter(tissue=="Foot") %>% 
-  pivot_longer(
-    cols = c(DM_proportion, Total),
-    names_to = "DM_status",
-    values_to = "proportion"
+# Create a new row for the "Total" feature in each group
+total_bars <- dm_bar_plot %>%
+  group_by(Type, tissue) %>%
+  summarise(
+    DM_count = sum(DM_count),
+    nonDM_count = sum(nonDM_count),
+    Total = sum(Total),
+    .groups = "drop"
   ) %>%
   mutate(
-    DM_status = recode(DM_status,
-                       "DM_proportion" = "DM",
-                       "Total" = "Total")
+    feature = "Total",
+    DM_proportion = DM_count / Total,
+    non_DM_proportion = nonDM_count / Total
   )
 
+library(dplyr)
+library(tidyr)
 
-p1 <- ggplot(foot, aes(x = DM_status, y = proportion, fill = feature)) +
-  geom_bar(stat = "identity", position = "fill") +
-  facet_wrap(~Type) +
-  scale_y_continuous(labels = scales::percent_format()) +
-  scale_fill_manual(values = custom_colors, drop = FALSE) +
-  labs(
-    title = "",
-    y = "Proportion",
-    x = "",
-    fill = "Feature"
-  ) +
-  theme_few() +
-  theme(
-    legend.position = "right",
-    axis.text = element_text(color = "black", size = 20),
-    axis.title = element_text(color = "black", size =25),
-    strip.text = element_text(color = "black", size = 25),
-    plot.title = element_text(color = "black"),
-    axis.ticks = element_line(color = "black"),
-    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5)
-  )
-p1
-
-
-gill<-dm_bar_plot %>% 
-  filter(tissue=="Gill") %>% 
-  pivot_longer(
-    cols = c(DM_proportion, Total),
-    names_to = "DM_status",
-    values_to = "proportion"
+## 1) Per tissue × Type × feature (counts + proportions)
+tbl_type <- dm_bar_plot %>%
+  group_by(tissue, Type, feature) %>%
+  summarise(
+    DM_count    = sum(DM_count),
+    nonDM_count = sum(nonDM_count),
+    Total       = sum(Total),
+    .groups = "drop"
   ) %>%
   mutate(
-    DM_status = recode(DM_status,
-                       "DM_proportion" = "DM",
-                       "Total" = "Total")
+    DM_proportion     = DM_count / Total,
+    non_DM_proportion = nonDM_count / Total
   )
 
-p2<-ggplot(gill, aes(x = DM_status, y = proportion, fill = feature)) +
-  geom_bar(stat = "identity", position = "fill") +
-  facet_wrap(~Type) +
-  scale_y_continuous(labels = scales::percent_format()) +
-  scale_fill_manual(values = custom_colors, drop = FALSE) +  # Ensures all colors show
-  labs(
-    title = "",
-    y = "",
-    x = "",
-    fill = "Feature"
-  ) +
-  theme_few() +
-  theme(legend.text = element_text(size = 20),
-        legend.title = element_text(size = 25),
-        legend.position = "right",
-        axis.text = element_text(color = "black", size = 20),
-        axis.title = element_text(color = "black", size = 25),
-        strip.text = element_text(color = "black", size = 25),
-        plot.title = element_text(color = "black"),
-        axis.ticks = element_line(color = "black"),
-        panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5))
-p2
+## 2) Add a combined "Total" (Origin+Transplant) per tissue × feature
+tbl_total <- dm_bar_plot %>%
+  group_by(tissue, feature) %>%
+  summarise(
+    DM_count    = sum(DM_count),
+    nonDM_count = sum(nonDM_count),
+    Total       = sum(Total),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    Type              = "Total",
+    DM_proportion     = DM_count / Total,
+    non_DM_proportion = nonDM_count / Total
+  ) %>%
+  select(names(tbl_type))  # same column order
 
-# p1 <- p1 +
-#   theme(
-#     plot.margin = margin(10, 10, 10, 10),
-#     axis.text = element_text(size = 12),
-#     axis.title = element_text(size = 14)
-#   )
-# 
-# p2 <- p2 +
-#   theme(
-#     plot.margin = margin(10, 10, 10, 10),
-#     axis.text = element_text(size = 12),
-#     axis.title = element_text(size = 14)
-#   )
+## 3) Final table (Origin, Transplant, then Total)
+summary_tbl <- bind_rows(tbl_type, tbl_total) %>%
+  mutate(Type = factor(Type, levels = c("Origin", "Transplant", "Total"))) %>%
+  arrange(tissue, Type, feature)
 
+summary_tbl
 
-# library(patchwork)
-# 
-# foot_DM <- p1 +plot_annotation(title = "A. Foot",
-#                                     theme = theme(plot.title = element_text(face= "bold", size = 20)))
-# 
-# gill_DM <- p2 +
-#   plot_annotation(title = "B. Gill",
-#                   theme = theme(plot.title = element_text(face= "bold", size = 20)))
-# 
-# 
-# 
-# combined <- wrap_elements(foot_DM) + wrap_elements(gill_DM) +
-#   plot_layout(ncol = 2, widths = c(1, 1), guides = "collect") +
-#   plot_annotation(tag_levels = NULL)  # turn off A/B tags
-# 
-# combined
-# 
-# # Reapply shared layout and theme
-# shared_theme <- theme_few() +
-#   theme(
-#     axis.text = element_text(color = "black", size = 12),
-#     axis.title = element_text(color = "black", size = 15),
-#     strip.text = element_text(color = "black", size = 15),
-#     plot.title = element_text(face = "bold", size = 20, hjust = 0),  # left-align title
-#     axis.ticks = element_line(color = "black"),
-#     panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
-#     plot.margin = margin(10, 10, 10, 10),
-#     legend.text = element_text(size = 13),
-#     legend.title = element_text(size = 15),
-#     legend.position = "right"
-#   )
-# 
-# # Apply titles as ggtitle
-# p1 <- p1 +
-#   ggtitle("A. Foot") +
-#   shared_theme +
-#   labs(y = "Proportion", x = "", fill = "Feature")
-# 
-# p2 <- p2 +
-#   ggtitle("B. Gill") +
-#   shared_theme +
-#   labs(y = "", x = "", fill = "Feature")
-# 
-# # Combine with shared legend and equal width
-# combined <- p1 + p2 +
-#   plot_layout(ncol = 2, widths = c(1, 1), guides = "collect") +
-#   plot_annotation(tag_levels = NULL)
-# 
-# combined
+# Separated origin and transplant tissues 
+
+origin_tissues<- dm_bar_plot %>% 
+  filter(Type =="Origin")
+transplant_tissues<- dm_bar_plot %>% 
+  filter(Type =="Transplant")
+
+# to look at overall distribution and whether the patterns differ between tissue combined
+table_data_origin <- xtabs(DM_count ~ feature + tissue, data = origin_tissues)
+fisher.test(table_data_origin)
+
+table_data_trans <- xtabs(DM_count ~ feature + tissue, data = transplant_tissues)
+fisher.test(table_data_trans)
+
+library(dplyr)
 
 
+# Transplant site comparing distribution of each feature vs. all other features in foot and gills
 
-# Add margin to ensure y-axis label is visible
-p1_clean <- p1 +
-  theme(
-    plot.title = element_blank(),
-    plot.margin = margin(10, 1, 10, 0.2),
-    legend.position = "none"# Top, Right, Bottom, Left
-  )
-
-p2_clean <- p2 +
-  theme(
-    plot.title = element_blank(),
-    plot.margin = margin(10, 10, 10, 2)
-  )
-
-# Combine with cowplot
-library(cowplot)
-
-plots_combined <- plot_grid(p1_clean, p2_clean, ncol = 2, rel_widths = c(1, 1), align = "hv")
-
-# Combine plots with smaller relative widths
-plots_combined <- plot_grid(
-  p1_clean, p2_clean,
-  ncol = 2,
-  rel_widths = c(1, 1),
-  align = "hv"
-)
-
-combined<-ggdraw() +
-  draw_plot(plots_combined, 0, 0, 1, 0.95) +
-  draw_plot_label(
-    label = c("A. Foot", "B. Gill"),
-    x = c(0.025, 0.528), 
-    y = c(1, 1),
-    hjust = 0,
-    fontface = "bold",
-    size = 26
-  )
-combined
-
-#ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot_final/DM_CpG_combined.png", combined, device = "png", width = 20, height = 11, dpi = 300, units = "in")
-#ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot_final/DM_CpG_combined.pdf", combined, device = "pdf", width = 14, height = 10, dpi = 300, units = "in")
-
-#ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/redo_interaction_folder_info/DM_CpG_combined.pdf", combined, device = "pdf", width = 14, height = 10, dpi = 300, units = "in")
-
-
-
-#to look at overall distribution and whether the patterns differ between tissue combined
-table_data <- xtabs(DM_count ~ feature + tissue, data = dm_bar_plot)
-fisher.test(table_data)
-
-#test whether gene body and promoter DM greater in foot vs. gill
-gene_body_promoter <- colSums(table_data[c("Exon", "Intron", "Promoter"), ])
-intergenic <- table_data["Intergenic", ]
-# Create 2x2 matrix
-collapsed_table <- rbind(GeneBody_Promoter = gene_body_promoter,
-                         Intergenic = intergenic)
-
-fisher.test(collapsed_table)
-
-
-# Split the data by Type_Categories
-split_data <- split(dm_bar_plot, dm_bar_plot$Type)
-
-# Run collapsed Fisher test for each treatment type
-collapsed_fisher_results <- lapply(split_data, function(sub_data) {
-  # Create the full table
-  table_data <- xtabs(DM_count ~ feature + tissue, data = sub_data)
-  # Collapse GeneBody + Promoter categories
-  gene_body_promoter <- colSums(table_data[c("Exon", "Intron", "Promoter"), , drop = FALSE])
-  intergenic <- table_data["Intergenic", , drop = FALSE]
+features_trans <- rownames(table_data_trans)
+results <- lapply(features_trans, function(f) {
+  # rows to use for "all other features"
+  others <- setdiff(features_trans, f)
   
-  # Build 2x2 matrix
-  collapsed_table <- rbind(
-    GeneBody_Promoter = gene_body_promoter,
-    Intergenic = intergenic
+  feature_vs_rest <- rbind(
+    Feature    = table_data_trans[f, , drop = FALSE],
+    All_others = colSums(table_data_trans[others, , drop = FALSE])
   )
   
-  # # # Run Fisher's test
-  fisher.test(collapsed_table)
+  test <- fisher.test(feature_vs_rest)  # works if there are exactly 2 columns
+  
+  data.frame(
+    feature    = f,
+    odds_ratio = if (!is.null(test$estimate)) unname(test$estimate) else NA_real_,
+    p_value    = test$p.value,
+    row.names  = NULL
+  )
 })
-collapsed_fisher_results
+results_df <- bind_rows(results)
+results_df <- results_df %>%
+  mutate(p_adj = p.adjust(p_value, method = "BH"))
+
+results_df
 
 
+# Origin site comparing distribution of each feature vs. all other features in foot and gills
 
-#look at dm cpgs compared to all available cpgs
-gill_trans <- dm_bar_plot %>% filter(tissue == "Gill", Type == "Transplant")
-gill_origin <- dm_bar_plot %>% filter(tissue == "Gill", Type == "Origin")
-gill_interact <- dm_bar_plot %>% filter(tissue == "Gill", Type == "Interacton")
+features_origin <- rownames(table_data_origin)
+results <- lapply(features_origin , function(f) {
+  # rows to use for "all other features"
+  others <- setdiff(features_origin, f)
+  
+  feature_vs_rest <- rbind(
+    Feature    = table_data_origin[f, , drop = FALSE],
+    All_others = colSums(table_data_origin[others, , drop = FALSE])
+  )
+  
+  test <- fisher.test(feature_vs_rest)  # works if there are exactly 2 columns
+  
+  data.frame(
+    feature    = f,
+    odds_ratio = if (!is.null(test$estimate)) unname(test$estimate) else NA_real_,
+    p_value    = test$p.value,
+    row.names  = NULL
+  )
+})
+
+results_df <- bind_rows(results)
+results_df <- results_df %>%
+  mutate(p_adj = p.adjust(p_value, method = "BH"))
+results_df
+
+
+# look at dm cpgs compared to background in gills and foot
+gill_trans <- dm_bar_plot %>% filter(tissue == "Gills", Type == "Transplant")
+gill_origin <- dm_bar_plot %>% filter(tissue == "Gills", Type == "Origin")
 
 foot_trans <- dm_bar_plot %>% filter(tissue == "Foot", Type == "Transplant")
 foot_origin <- dm_bar_plot %>% filter(tissue == "Foot", Type == "Origin")
-foot_interact <- dm_bar_plot %>% filter(tissue == "Foot", Type == "Interacton")
 
-# For each feature, compare to rest
+
+# For each feature, compare to rest - Foot origin
 enrichment_results <- foot_origin%>%
   rowwise() %>%
   mutate(
@@ -309,9 +189,7 @@ enrichment_results <- enrichment_results %>%
 
 enrichment_results
 
-
-
-# For each feature, compare to rest
+# For each feature, compare to rest - Foot transplant
 enrichment_results <- foot_trans%>%
   rowwise() %>%
   mutate(
@@ -330,9 +208,7 @@ enrichment_results <- enrichment_results %>%
 enrichment_results
 
 
-
-
-# For each feature, compare to rest
+# For each feature, compare to rest, gills origin
 enrichment_results <- gill_origin%>%
   rowwise() %>%
   mutate(
@@ -344,37 +220,13 @@ enrichment_results <- gill_origin%>%
   ungroup() %>% 
   dplyr::select(feature, DM_count, Total, p_value, odds_ratio)
 
-
 enrichment_results <- enrichment_results %>%
   mutate(p_adj = p.adjust(p_value, method = "BH"))
 
 enrichment_results
 
 
-enrichment_results <- gill_trans%>%
-  rowwise() %>%
-  mutate(
-    other_DM = sum(gill_trans$DM_count) - DM_count, #dm found in other features
-    other_total = sum(gill_trans$Total) - Total, #other available features
-    p_value = matrix(c(DM_count, Total, other_DM, other_total), nrow = 2))
-
-
-
-# For each feature, compare to rest
-enrichment_results <- gill_trans%>%
-  rowwise() %>%
-  mutate(
-    other_DM = sum(gill_trans$DM_count) - DM_count, #dm found in other features
-    other_total = sum(gill_trans$Total) - Total, #other available features
-    p_value = fisher.test(matrix(c(DM_count, Total - DM_count, other_DM, other_total - other_DM), nrow = 2))$p.value,
-    odds_ratio = fisher.test(matrix(c(DM_count, Total - DM_count, other_DM, other_total - other_DM), nrow = 2))$estimate
-  ) %>%
-  ungroup() %>% 
-  dplyr::select(feature, DM_count, Total, p_value, odds_ratio)
-
-
-
-# For each feature, compare to rest
+# For each feature, compare to rest, gills transplant
 enrichment_results <- gill_trans%>%
   rowwise() %>%
   mutate(
@@ -386,14 +238,13 @@ enrichment_results <- gill_trans%>%
   ungroup() %>% 
   dplyr::select(feature, DM_count, Total, p_value, odds_ratio)
 
-
-
 enrichment_results <- enrichment_results %>%
   mutate(p_adj = p.adjust(p_value, method = "BH"))
 
 enrichment_results
 
 
+# Graphing bar plot of methylation proportion among each feature
 
 # Pivot DM_count, nonDM_count, and Total into long format
 library(dplyr)
@@ -439,7 +290,7 @@ foot<-dm_long %>%
 
 
 gill<-dm_long %>% 
-  filter(tissue=="Gill") 
+  filter(tissue=="Gills") 
 
 
 p1 <- ggplot(foot, aes(x = Type_Categories, y = Count, fill = feature)) +
@@ -455,10 +306,10 @@ p1 <- ggplot(foot, aes(x = Type_Categories, y = Count, fill = feature)) +
   theme_few() +
   theme(
     legend.position = "right",
-    axis.text.x = element_text(color = "black", size = 20),  
-    axis.text.y = element_text(color = "black", size = 18),
-    axis.title = element_text(color = "black", size =23),
-    strip.text = element_text(color = "black", size = 25),
+    axis.text.x = element_text(color = "black", size = 14),  
+    axis.text.y = element_text(color = "black", size = 20),
+    axis.title = element_text(color = "black", size =20),
+    strip.text = element_text(color = "black", size = 20),
     plot.title = element_text(color = "black"),
     axis.ticks = element_line(color = "black"),
     panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5)
@@ -479,36 +330,18 @@ p2 <- ggplot(gill, aes(x = Type_Categories, y = Count, fill = feature)) +
   theme_few() +
   theme(
     legend.position = "right",
-    legend.text = element_text(size = 22),
-    legend.title = element_text(size = 22.8),
-    axis.text.x = element_text(color = "black", size = 20),  
-    axis.text.y = element_text(color = "black", size = 18),
-    axis.title = element_text(color = "black", size =23),
-    strip.text = element_text(color = "black", size = 25),
+    legend.text = element_text(size = 18),
+    legend.title = element_text(size = 20),
+    axis.text.x = element_text(color = "black", size = 14),  
+    axis.text.y = element_text(color = "black", size = 20),
+    axis.title = element_text(color = "black", size =20),
+    strip.text = element_text(color = "black", size = 20),
     plot.title = element_text(color = "black"),
     axis.ticks = element_line(color = "black"),
     panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5)
   )
 p2
 
-
-
-
-# # Plot the data
-ggplot(dm_long, aes(x = Type_Categories, y = Count, fill = feature)) +
-  geom_bar(stat = "identity", position = "fill") +
-  facet_wrap(~tissue) +
-  scale_y_continuous(labels = scales::percent_format()) +
-  scale_fill_manual(values = custom_colors, drop = FALSE) +  # Ensures all colors show
-  labs(
-    title = "",
-    y = "Proportion (%)",
-    x = "",
-    fill = "Feature"
-  ) +
-  theme_few()+ theme(
-    strip.text = element_text(face = "bold", size = 12)
-  ) 
 
 
 # Add margin to ensure y-axis label is visible
@@ -522,7 +355,7 @@ p1_clean <- p1 +
 p2_clean <- p2 +
   theme(
     plot.title = element_blank(),
-    plot.margin = margin(10, 10, 10, 2)
+    plot.margin = margin(10, 2, 10, 0.2)
   )
 
 # Combine with cowplot
@@ -531,52 +364,58 @@ library(cowplot)
 plots_combined <- plot_grid(p1_clean, p2_clean, ncol = 2, rel_widths = c(1, 1), align = "hv")
 
 # # Combine plots with smaller relative widths
-# plots_combined <- plot_grid(
-#   p1_clean, p2_clean,
-#   ncol = 2,
-#   rel_widths = c(1, 1),
-#   align = "hv"
-# )
+plots_combined <- plot_grid(
+  p1_clean, p2_clean,
+  ncol = 2,
+  align = "hv",
+  axis = "tb" 
+)
 
-combined<-ggdraw() +
+combined<-ggdraw(ggdraw(clip = "off") ) +
+  theme(plot.background = element_rect(fill = "white", colour = NA))+
   draw_plot(plots_combined, 0, 0, 1, 0.95) +
   draw_plot_label(
-    label = c("A. Foot", "B. Gill"),
-    x = c(0.008, 0.48),  # ← this is the key tweak
-    y = c(1, 1),
+    label = c("A. Foot", "B. Gills"),
+    x = c(0.008, 0.48),
+    y = c(0.999, 0.999),
     hjust = 0,
     fontface = "bold",
-    size = 26
+    size = 20
   )
+
 combined
 
 
-# ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/DM_CpG_combined.png", combined, device = "png", width = 20, height = 11, dpi = 300, units = "in")
-# ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/redo_interaction_folder_info/DM_CpG_combined.pdf", combined, device = "pdf", width = 14, height = 10, dpi = 300, units = "in")
-# 
+
+##### LM to test log2FC differences between tissues
+
+##### see if log2FC of DM differ between treatment and tissues
 
 
-#### glm between tissues
-
-
-#### see if log fold changes differ between treatment and tissues
-
-merged_all_DM_foot 
-
-colnames(merged_all_DM_foot)[colnames(merged_all_DM_foot) == "transplant_logFC"] <- "logFC"
-
-
-merged_all_DM_gill
-
-colnames(merged_all_DM_gill)[colnames(merged_all_DM_gill) == "transplant_logFC"] <- "logFC"
-
-
+#### load in log2FC data
 merged_all_DM_gill<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/merged_all_DM_gill.csv") %>% mutate(tissue ="Gill")
 merged_all_DM_foot<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/merged_all_DM_foot.csv") %>% mutate(tissue ="foot")
 
-lfc_tissues<-rbind(merged_all_DM_gill,merged_all_DM_foot)
-fit <- lmer(transplant_logFC ~ tissue * Treat + (1|gene_id), data = lfc_tissues)
+colnames(merged_all_DM_foot)[colnames(merged_all_DM_foot) == "transplant_logFC"] <- "logFC"
+colnames(merged_all_DM_gill)[colnames(merged_all_DM_gill) == "transplant_logFC"] <- "logFC"
+
+merged_unique_foot <- merged_all_DM_foot %>%
+  distinct(combined, Treat, .keep_all = TRUE)
+
+merged_unique_gill <- merged_all_DM_gill %>%
+  distinct(combined, Treat, .keep_all = TRUE)
+
+#### combine log2FC of DM of the two tissue types
+lfc_tissues<-rbind(merged_unique_gill, merged_unique_foot)
+
+fit <- lm(transplant_logFC ~ tissue * Treat, data = lfc_tissues)
 summary(fit)
 
-emm <- emmeans(fit, ~ Treat | tissue)   # treatment means within each tissue
-emm
+emmeans(fit, pairwise ~ Treat | tissue)   # treatment means within each tissue
+emmeans(fit, pairwise ~  tissue | Treat) 
+
+
+fit <- lm(abs(transplant_logFC) ~ tissue * Treat , data = lfc_tissues)
+summary(fit)
+emmeans(fit, pairwise ~ Treat | tissue)   # treatment means within each tissue
+emmeans(fit, pairwise ~  tissue | Treat) 
