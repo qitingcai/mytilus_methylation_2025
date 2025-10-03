@@ -94,7 +94,7 @@ venn.plot <- draw.pairwise.venn(
 dev.off()
 
 
-######### Pearson's correlation between all logFC in foot and gills #######
+#### Pearson's correlation between all logFC in foot and gills ####
 
 #load data
 gill_all_logfc<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/gill_unique_all_CpG.csv")
