@@ -1,0 +1,809 @@
+#### Aims of this scripts: code used for generating figures in the main text and supplements ###
+
+### Code to make Figure 1 in the main text, includes lm tests between shell length and PCA, and mantel test to compare Euclidean distance between samples among first 19 PC ###
+
+### load libraries
+library(edgeR)
+library(mice)
+library(tidyverse)
+library(systemfonts)
+library(Biobase)
+library(ggplot2)
+library(dplyr)
+library(ggrepel)
+library(fields)
+library(lmerTest)
+library(patchwork)
+
+###### Imputation - run on Hummingbird HPC #####
+
+setwd("/hb/groups/kelley_lab/tina/mytilus/Rscripts/data/merged_cov/outlier_detection")
+
+### Load metadata file that include sample names, load all coverage files into R ###
+meta_data_foot<-read.delim("allsamples.txt", row.names = "sample", stringsAsFactors = FALSE) 
+Sample_foot <- row.names(meta_data_foot)
+files_foot <- paste0(Sample_foot,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
+
+meta_data_foot_aqm <- meta_data_foot
+row.names(meta_data_foot_aqm) <- gsub("-", ".", paste0("X", row.names(meta_data_foot_aqm),".Me"))
+
+### EdgeR function readBismark2DGE reads all the files and collates the counts for all the sample into one data object ###
+yall <- readBismark2DGE(files_foot, sample.names=Sample_foot)
+
+### Check dimension and the count matrix ###
+dim(yall)
+head(yall$counts)
+
+### Save a data frame for downstream analyses ###
+yall_df<-as.data.frame(yall)
+
+### Sum up the counts of methylated and unmethylated reads to get the total read coverage at each CpG site for each sample ###
+Methylation <- gl(2, 1, ncol(yall), labels = c("Me", "Un"))
+Me <- yall$counts[ , Methylation == "Me" ]
+Un <- yall$counts[ , Methylation == "Un" ]
+Coverage <- Me + Un
+head(Coverage)
+
+#### No filtering for matrix imputation
+n=0
+keep_foot <- rowSums(Coverage >= n) >= 0
+table(keep_foot)
+
+### DGEList object is subsetted to retain only the filtered loci ###
+y_foot <- yall[keep_foot,, keep.lib.sizes=FALSE]
+
+### Normalization - set the library sizes for each sample to be the average of the total read counts for the methylated and unmethylated libraries ###
+TotalLibSize <- y_foot$samples$lib.size[Methylation=="Me"] +
+  +                 y_foot$samples$lib.size[Methylation=="Un"]
+y_foot$samples$lib.size <- rep(TotalLibSize, each=2)
+y_foot$samples
+
+### Compute the corresponding methylation summary from the methylated and unmethylated counts ###
+Me_foot <- y_foot$counts[, Methylation=="Me"]
+Un_foot <- y_foot$counts[, Methylation=="Un"]
+
+### Calculating a methylation proportion matrix
+prop_meth_matrix_foot <- Me_foot/(Me_foot+Un_foot)
+
+# Convert to a data frame and make column names syntactically valid
+prop_df <- as.data.frame(prop_meth_matrix_foot)
+colnames(prop_df) <- make.names(colnames(prop_df))
+
+# Also update the sample names in metadata to match
+rownames(meta_data_foot) <- make.names(rownames(meta_data_foot))
+
+# Impute missing values using predictive mean matching
+imputed_data <- mice(prop_df, m = 1, method = 'pmm', seed = 123)
+
+# Extract the completed dataset
+complete_data <- complete(imputed_data, 1)
+
+###################################################
+
+
+################ Making Figure 2 ##########
+setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/outlier detection/")
+pca_scores<-read.csv("all_imp_scores_pca.csv")
+meta_data<-read.csv("samples_65.csv")
+
+###GETTING LENGTH DATA FOR ALL 65 SAMPLES
+
+sample_info<-read.csv("full_sample.csv")
+all_length<-meta_data %>% 
+  left_join(sample_info,
+            by=c("meth"="sample.ID",
+                 "tissue"="Tissue")) %>% 
+  dplyr::select(sample,meth,tissue,origin_site,transplant_site,GROUP_CODE.x,
+         LENGTH_INIT..mm.,LENGTH_FINAL..mm.)
+# write_csv(all_length,"sample_65_wlength.csv")
+
+##getting the PC contributions
+# complete_data <-read.csv("all_complete_data.csv")
+# imp_pca_result <- prcomp(t(complete_data))
+# summary(imp_pca_result)
+#pc1, 0.03749  pc2 0.03026
+
+#looking at PC variance and decide how many spaces to look at
+pc_variance <- read.csv(
+  "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/Methymytilus_Final_Rcode_github/PC_variance.csv",
+  row.names = 1,
+  check.names = FALSE
+)
+pc <- data.frame(
+  PC      = seq_len(ncol(pc_variance)),
+  prop    = as.numeric(pc_variance["Proportion of Variance", ]),
+  cumprop = as.numeric(pc_variance["Cumulative Proportion", ])
+)
+
+ggplot(pc, aes(PC, prop * 100)) +
+  geom_col() +
+  geom_line(aes(y = cumprop * 100), color = "red", group = 1) +
+  geom_point(aes(y = cumprop * 100), color = "red") +
+  labs(x = "PC",
+       y = "% Variance Explained",
+       title = "") +
+  theme_minimal()
+
+
+
+ggplot(pc, aes(PC, prop * 100)) +
+  geom_col() +
+  labs(x = "PC",
+       y = "% Variance Explained",
+       title = "") +
+  theme_minimal()
+
+###########
+
+check_G_between <- function(x) {
+  # Find '.G_'
+  if (grepl("\\.G_", x)) {
+    return("Gills")
+  } else {
+    return("Foot")
+  }
+}
+
+rownames(pca_scores)<-pca_scores[,1]
+pca_scores$Tissue <- sapply(row.names(pca_scores), check_G_between)
+
+sample_ids <- rownames(pca_scores)
+extracted_letters <-sub("^X(\\w+).*", "\\1", sample_ids)
+
+# Change the first column to keep only the desired portion
+pca_scores[, 1] <- sub("^X(\\w+)\\..*", "\\1", pca_scores[, 1])
+
+### Merging metadata and pca scores data ###
+pca_data <-meta_data %>% 
+  left_join(pca_scores,
+            by=c("meth"="X",
+                 "tissue"="Tissue"))
+
+pca_data$GROUP_CODE <- factor(pca_data$GROUP_CODE,
+                              levels = c("lowprotected_protected","lowprotected_exposed",
+                                         "lowexposed_exposed","lowexposed_protected"))
+
+### Create lines connecting points with the same letter ###
+line_data <- pca_data %>%
+  group_by(meth) %>%
+  filter(dplyr::n() > 1) %>%
+  arrange(meth, PC1, PC2)
+
+pca_imputated_merged <- ggplot(pca_data, aes(
+  x = PC1,
+  y = PC2,
+  shape = GROUP_CODE,
+  fill = tissue
+)) +
+  scale_fill_manual(
+    values = c("Foot" = "#3bbdcc", "Gills" = "#e68d4e"),
+    name ="Tissue Type") +
+  guides(fill = guide_legend(order = 1, override.aes = list(shape = 21)))+ 
+  geom_point(size = 5, alpha = 0.8, stroke = 0.2, color = "black") +
+  geom_line(aes(group = meth), color = "black", linetype = 1) +
+  scale_shape_manual(
+    values = c(
+      "lowprotected_protected" = 21,
+      "lowprotected_exposed" = 22,
+      "lowexposed_exposed" = 24,
+      "lowexposed_protected" = 23
+    ),
+    labels = c(
+      "lowprotected_protected" = "Protected_Protected",
+      "lowprotected_exposed" = "Protected_Exposed",
+      "lowexposed_exposed" = "Exposed_Exposed",
+      "lowexposed_protected" = "Exposed_Protected"
+    ), 
+    name  = "Treatment",
+    guide = guide_legend(order=2) 
+  ) +
+  labs(
+    x = "PC1 (3.75%)",
+    y = "PC2 (3.03%)",
+    fill = "Tissue Type",
+    shape = "Treatment",
+    tag = "A)"  
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    strip.text = element_text(size = 13),
+    axis.text.x = element_text(size = 18),
+    axis.text.y = element_text(size = 18),
+    axis.title = element_text(size = 20),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 15)
+  )  
+
+pca_imputated_merged
+
+##### calculating Euclidean distance between tissues ###
+
+## formatting
+edistance<-pca_scores %>% 
+  select(X, PC1,PC2, Tissue)
+
+edistance$SampleID <- rownames(edistance)
+rownames(edistance) <- NULL
+
+edistance$SampleID  <- gsub("^X", "", edistance$SampleID  )
+
+##calculating distance between the same individual
+
+same_indiv_distances <- edistance %>%
+  group_by(X) %>%
+  filter(dplyr::n() == 2) %>%  
+  arrange(X, Tissue) %>%
+  summarise(distance = sqrt((PC1[1] - PC1[2])^2 + (PC2[1] - PC2[2])^2)) %>%
+  pull(distance)
+
+mean_same_indiv <- mean(same_indiv_distances)
+print(mean_same_indiv)
+
+
+###calculating distance between different individuals
+
+coords <- edistance %>%
+  select(X, Tissue, PC1, PC2)
+
+# making all pairwise combinations
+pair_indices <- combn(nrow(coords), 2)
+
+#between differnt tissues of different individuals
+between_distances <- apply(pair_indices, 2, function(idx) {
+  i <- idx[1]
+  j <- idx[2]
+  
+  if (coords$X[i] != coords$X[j]) {   # only between individuals
+    dist <- sqrt((coords$PC1[i] - coords$PC1[j])^2 +
+                   (coords$PC2[i] - coords$PC2[j])^2)
+    
+    # record tissue info for later summaries
+    data.frame(
+      id1 = coords$X[i],
+      id2 = coords$X[j],
+      tissue1 = coords$Tissue[i],
+      tissue2 = coords$Tissue[j],
+      distance = dist
+    )
+  } else {
+    NULL
+  }
+})
+
+
+between_df <- do.call(rbind, between_distances)
+
+scores19 <- as.matrix(pc_variance[paste0("PC", 1:19)])
+D <- dist(scores19, method = "euclidean")
+
+
+between_distances <- na.omit(between_df )
+mean_diff_indiv <- mean(between_distances$distance)
+
+##using a mantel test
+edistance<-pca_scores %>% 
+  select(X, PC1, PC2, Tissue)
+
+
+pca_dist <- dist(pca_scores[, paste0("PC", 1:19)], method = "euclidean")
+
+# Look at the result
+pca_dist
+
+# PCA distance matrix across all samples 19 PCs
+pca_dist_19 <- dist(pca_dist, method = "euclidean")
+
+mantel_test <- mantel(pca_dist_19, id_dist,
+                      method = "pearson", permutations = 999)
+
+mantel_test
+
+# PCA distance matrix across all samples for PC1 and PC2
+pca_dist <- dist(edistance[, c("PC1","PC2")])
+
+# 0 if same individual, 1 if different
+id_dist <- as.dist( outer(edistance$X, edistance$X,
+                          function(a,b) as.integer(a != b)) )
+
+mantel_test <- mantel(pca_dist, id_dist,
+                    method = "pearson", permutations = 999)
+
+mantel_test
+
+##### regressing PC1 and length
+
+length_data<-read_csv("sample_65_wlength.csv")
+
+#using imp_scores, has all the loading data for 69 or 56 samples
+# pca_scores$X<-pca_scores$X%>% 
+#   gsub("^X", "", .) %>%        # Remove the initial "X"
+#   gsub("_.*$", "", .) %>% 
+#   gsub("\\.", "-", .)  
+
+colnames(length_data)[1] <- "sample_name"
+PC <- length_data %>% 
+  left_join(pca_data, by = c("sample_name"="sample"))
+
+#remotes::install_version("MuMIn", "1.46.0")
+# install.packages("performance")
+library(MuMIn)
+# library(performance)
+# lm_length_old<-lm(PC1~`LENGTH_FINAL (mm)` + Tissue.x, data=PC)
+lm_length_PC1<-lmer(PC1~`LENGTH_FINAL..mm.` + tissue.x + (1|`meth.x`), data=PC)
+summary(lm_length_PC1)
+
+### GETTING R^2 VALLUES
+r.squaredGLMM(lm_length_PC1)
+
+# r2_nakagawa(lm_length)
+cor.test(PC$PC1,PC$`LENGTH_FINAL..mm.`)
+
+lm_length_PC2<-lmer(PC2~`LENGTH_FINAL..mm.` + tissue.x + (1|`meth.x`), data=PC)
+summary(lm_length_PC2)
+
+library(ggeffects) 
+
+# Predicting the best fit line with LM results
+prd <- ggpredict(lm_length_PC1, terms = c("LENGTH_FINAL..mm.[all]"), se=TRUE)
+
+prd2 <- ggpredict(lm_length_PC2, terms = c("LENGTH_FINAL..mm.[all]"), se=TRUE)
+
+pc1_length<-ggplot(PC, aes(x = `LENGTH_FINAL..mm.`, y = PC1)) + #plotting shell length and PC1 loadings
+  geom_point(aes(fill= tissue.x), alpha = 0.8, stroke = 0.2, col="black", shape =21,
+             size=5) +  # Keep points colored by tissue
+  geom_line(aes(group = `meth.x`), color = "black", linetype = 1) + 
+  # geom_smooth(method = "lm", size = 0.8, alpha = 0.3, color = "blue") +  # Single regression line for all shell length and PC1
+  labs(
+    y = "PC1", #label y axis
+    x = "Final shell length (mm)", #label x axis
+    fill = "Tissue Type", #specify color of points
+    tag = "B)"  
+  ) + 
+  scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gills" = "#e68d4e"),
+                     labels = c("F" = "Foot", "G" = "Gills"),
+                    name   = "Tissue Type",
+                    guide  = guide_legend(order = 1))+ #specify color of points
+  theme_bw() +
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  theme(
+    axis.text.x = element_text(size = 18,color="black"), # X-axis text size
+    axis.text.y = element_text(size = 18,color="black"), # Y-axis text size
+    axis.title.x = element_text(size = 20,color="black"),  # Axis title size
+    axis.title.y = element_text(size = 20,color="black"),
+    strip.text = element_text(size = 13),
+    legend.text = element_text(size = 13,color="black"), # Legend text size
+    legend.title = element_text(size = 15,color="black"),# Legend title size
+    panel.grid = element_blank(),         # Remove grid lines
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
+    legend.position = "none" ,
+    legend.box.margin = margin(0, -10, 0, 0)) +
+  geom_ribbon(data = prd,
+              aes(x = x, ymin = conf.low, ymax = conf.high),
+              fill = "grey",
+              alpha = 0.3, inherit.aes = FALSE) +
+  geom_line(data = prd,
+            aes(x = x, y = predicted),
+            color = "red",
+            linewidth = 0.8,
+            alpha =0.7)
+
+pc1_length
+
+# PC$`sample ID`<- sub("-.*", "",PC$`sample ID`)
+# PC_unique <- PC[!duplicated(PC$`sample ID`), ] 
+
+# Save both panels for figure 2
+p1_fix <- pca_imputated_merged +
+  labs(tag = "A.") +
+  theme(plot.margin = margin(20,20,20,20),
+        plot.tag = element_text(size = 20, face = "bold"),
+        plot.tag.position = c(0.01, 0.99))
+
+p2_fix <- pc1_length +
+  labs(tag = "B.") +
+  theme(plot.margin = margin(20,20,20,20),
+        plot.tag = element_text(size = 20, face = "bold"),
+        plot.tag.position = c(0.01, 0.99))
+
+combined <- (p1_fix | guide_area() | p2_fix) +
+  plot_layout(widths = c(1, 0.6, 1), guides = "collect")
+
+# ggsave(
+#   "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/submission/fig2.png",
+#   plot = combined, width = 20, height = 8, dpi = 300, bg = "white"
+# )
+
+ggsave(
+  "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/submission/fig2_updated.png",
+  plot = combined, width = 12, height = 4.8, dpi = 300, bg = "white"
+)
+
+##### Making figure S2 ###
+ 
+pc2_length<-ggplot(PC, aes(x = `LENGTH_FINAL..mm.`, y = PC2)) + #plotting shell length and PC1 loadings
+   geom_point(aes(fill= tissue.x), alpha = 0.8, stroke = 0.2, col="black", shape =21, size=6) +  # Keep points colored by tissue
+   geom_line(aes(group = `meth.x`), color = "black", linetype = 1) + 
+   # geom_smooth(method = "lm", size = 0.8, alpha = 0.3, color = "blue") +  # Single regression line for all shell length and PC2
+   labs(
+     y = "PC2", #label y axis
+     x = "Final shell length (mm)", #label x axis
+     fill = "Tissue Type" #specify color of points
+   ) + 
+   scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gills" = "#e68d4e"),
+                      labels = c("F" = "Foot", "G" = "Gills"),
+                     name   = "Tissue Type",
+                     guide  = guide_legend(order = 1))  + #specify color of points
+   theme_bw() +
+   guides(color = guide_legend(override.aes = list(size = 8))) +
+   theme(
+     axis.text.x = element_text(size = 18,color="black"), # X-axis text size
+     axis.text.y = element_text(size = 18,color="black"), # Y-axis text size
+     axis.title.x = element_text(size = 24,color="black"),  # Axis title size
+     axis.title.y = element_text(size = 24,color="black"),
+     strip.text = element_text(size = 20),
+     legend.text = element_text(size = 18,color="black"), # Legend text size
+     legend.title = element_text(size = 18,color="black"),# Legend title size
+     panel.grid = element_blank(),         # Remove grid lines
+     panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
+     legend.box.margin = margin(0, -10, 0, 0)) +
+  geom_ribbon(data = prd2,
+              aes(x = x, ymin = conf.low, ymax = conf.high),
+              fill = "grey",
+              alpha = 0.4, inherit.aes = FALSE) +
+  geom_line(data = prd2,
+            aes(x = x, y = predicted),
+            color = "red",
+            linewidth = 1,
+            alpha =0.8)
+ 
+ pc2_length
+ 
+
+# ggsave("figS2.png", plot = pc2_length, width = 10, height = 8, dpi = 300)
+ggsave("figS2_updated.png", plot = pc2_length, width = 12, height = 8, dpi = 300)
+
+
+### Code to make Figure 2 in the main text ###
+
+library(glmmTMB)
+library(ggthemes)
+
+#### Load file with average methylation proportions ###
+
+meth_prop_all<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot_final/percentage_allsample_genomewide.csv")
+
+###### Running a GLM to assess the relationship between mean global methylation % and tissue type, treatment groups ####
+glm<-glmmTMB(`Pre-filtered mean genome wide methylation (%)`/100 ~ Tissue + `Origin site` + `Transplant site` +  (1|Sample),  data=meth_prop_all, family=beta_family(link="logit"))
+summary(glm)
+
+glm_post<-glmmTMB(`Post-filtered mean genomw wide methylation (%)`/100 ~ Tissue + `Origin site` + `Transplant site` + (1|Sample),  data=meth_prop_all, family=beta_family(link="logit"))
+summary(glm_post)
+
+meth_prop_all_pre<-meth_prop_all 
+# meth_prop_all_pre<-meth_prop_all %>% 
+#   select(- `Pre-filtered mean global methylation (%)`)
+
+# Define custom function for mean ± SE
+mean_se <- function(x) {
+  se <- sd(x) / sqrt(length(x))
+  return(c(y = mean(x), ymin = mean(x) - se, ymax = mean(x) + se))
+}
+
+## figure s2
+### just jitter with mean and SD
+p1 <- ggplot(meth_prop_all_pre, aes(x = `Transplant site`, y =`Pre-filtered mean genome wide methylation (%)`/100, fill = Tissue)) + 
+  # Jittered points with custom appearance
+  geom_jitter( size = 6, alpha = 0.6, 
+               stroke = 0.2, shape = 21, 
+               aes(fill = Tissue, color = "black"),
+               position = position_jitterdodge(jitter.width = 0.1, jitter.height = 0, dodge.width = 0.6)) + 
+  # Adding mean and standard deviation as points with error bars
+  stat_summary(
+    aes(color = Tissue),  # Correctly map color to Tissue
+    fun.data = mean_se, 
+    geom = "pointrange", 
+    position = position_dodge(width = 0.6), 
+    size = 2,
+    shape=18,
+    alpha=1,
+    show.legend = FALSE
+  ) + 
+  facet_wrap(~`Origin site`) +  # Facet by site_type
+  theme(strip.text = element_text(size = 18, face = "bold"),  
+        strip.background = element_blank(),  # Removes the gray background
+        strip.placement = "outside")+
+  scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gills" = "#e68d4e")) +  # Custom fill colors for Tissue
+  scale_color_manual(values = c("Foot" = "#2c8e99", "Gills" = "#d4562a")) +  # Custom point color for Tissue
+   guides(color = "none")+
+  labs(y = "Proportion of CpG Methylation",
+       fill="Tissue Type") +  # Axis labels and title
+  #scale_y_continuous(limits = c(0.1, 0.3)) + 
+  # Set y-axis limits from 0 to 1
+  theme_few()+
+  theme(
+    strip.text = element_text(size = 18, color="black"),  # Facet label size
+    axis.text.x = element_text(size = 18, color="black"),   # Axis text size
+    axis.title.x = element_text(size = 20, color="black",hjust = 0.5, margin = margin(t = 14)),  # Axis title size
+    legend.title = element_text(size = 18, color="black"),
+    legend.text = element_text(size = 18, color="black"),
+    axis.text.y = element_text(size = 18, color = "black"),
+    axis.title.y = element_text(size = 20, color = "black",margin = margin(r = 12)),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5))+
+  ggtitle("Origin site") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20, margin = margin(b = 4)))
+
+
+# Print the plot
+print(p1)
+
+#### Figure 2 ####
+
+#### post filtering methylation proportion plot ####
+
+### just jitter with mean and SD
+p2 <- ggplot(meth_prop_all_pre, aes(x = `Transplant site`, y =`Post-filtered mean genomw wide methylation (%)`/100, fill = Tissue)) + 
+  # Jittered points with custom appearance
+  geom_jitter( size = 6, alpha = 0.6, 
+               stroke = 0.2, shape = 21, 
+               aes(fill = Tissue, color = "black"),
+               position = position_jitterdodge(jitter.width = 0.1, jitter.height = 0, dodge.width = 0.6)) + 
+  # Adding mean and standard deviation as points with error bars
+  stat_summary(
+    aes(color = Tissue),  # Correctly map color to Tissue
+    fun.data = mean_se, 
+    geom = "pointrange", 
+    position = position_dodge(width = 0.6), 
+    size = 2,
+    shape=18,
+    alpha=0.9,
+    show.legend = FALSE
+  ) + 
+  facet_wrap(~`Origin site`) +  # Facet by site_type
+  theme(strip.text = element_text(size = 18, face = "bold"),  
+        strip.background = element_blank(),  # Removes the gray background
+        strip.placement = "outside")+
+  scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gills" = "#e68d4e")) +  # Custom fill colors for Tissue
+  scale_color_manual(values = c("Foot" = "#2c8e99", "Gills" = "#d4562a")) +  # Custom point color for Tissue
+  labs(y = "Proportion of CpG Methylation",
+       fill="Tissue Type") +  # Axis labels and title
+  #scale_y_continuous(limits = c(0.1, 0.3)) + 
+  # Set y-axis limits from 0 to 1
+  theme_few() +  # Minimal theme
+  theme(
+    strip.text = element_text(size = 18, color="black"),  # Facet label size
+    axis.text.x = element_text(size = 18, color="black"),   # Axis text size
+    axis.title.x = element_text(size = 20, color="black",hjust = 0.5,margin = margin(t = 14)),  # Axis title size
+    legend.title = element_text(size = 18, color="black"),
+    legend.text = element_text(size = 18, color="black"),
+    axis.text.y = element_text(size = 18, color = "black"),
+    axis.title.y = element_text(size = 20, color = "black",margin = margin(r = 12)),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5))+
+  ggtitle("Origin site") +
+  theme(plot.title = element_text(hjust = 0.5, size = 20, margin = margin(b = 4)))+
+   guides(color = "none") 
+
+print(p2) 
+
+# ggsave("global_meth_genomewide_prefilter.pdf", p1, device = "pdf", width = 12, height = 5, dpi = 300, units = "in")
+ ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/submission/Manuscript final edits/Figures/global_meth_genomewide_prefilter.png", p1, device = "png", width = 12, height = 8, dpi = 300, units = "in")
+# ggsave("global_meth_genomewide_postfilter.pdf", p2, device = "pdf", width = 14, height = 10, dpi = 300, units = "in")
+ ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/submission/Manuscript final edits/Figures/global_meth_genomewide_postfilter.png", p2, device = "png", width = 12, height = 8, dpi = 300, units = "in")
+
+
+#### Code to make figure 3 in the main text, combining foot and gill volcano plots ####
+### making combined tissue volcano plots Figure 3
+
+foot_volcano_labeled <- foot_volcano + plot_annotation(title = "A. Foot",
+                                                       theme = theme(plot.title = element_text(face= "bold", size = 20)))
+gill_volcano_labeled <- gill_volcano + plot_annotation(title = "B. Gills",
+                                                       theme = theme(plot.title = element_text(face= "bold", size = 20)))
+
+# 2. Combine them without automatic tags
+combined <- wrap_elements(foot_volcano_labeled) + wrap_elements(gill_volcano_labeled) +
+  plot_layout(ncol = 2, guides = "collect") +
+  plot_annotation(tag_levels = NULL)  # turn off A/B tags
+
+combined <- combined + plot_layout(guides = "collect") & 
+  theme(plot.margin = margin(t = 4, r = 10, b = 5, l = 1))  # Add right padding
+
+combined
+
+
+# png("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/submission/DM_combined.png", width = 23, height = 15, units = "in", res = 300)
+# png("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/final_DM_combined_no_interaction.png", width = 28, height = 20, units = "in", res = 300)
+png("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/final_DM_combined_no_interaction_updated.png", width = 12, height = 10, units = "in", res = 300)
+print(combined)
+
+
+# Add "Origin" to top-right
+grid.text("Origin", x = unit(0.975, "npc"), y = unit(0.76, "npc"),
+          rot = 270, gp = gpar(fontsize = 20, fontface = "bold"))
+
+# Add "Transplant" to bottom -right
+grid.text("Transplant", x = unit(0.975, "npc"), y = unit(0.28, "npc"),
+          rot = 270, gp = gpar(fontsize = 20, fontface = "bold"))
+
+
+# 4. Close the device to save the file
+dev.off()
+
+
+#### Code to make Figure 4 in the main text, as well as code for testing correlation of overall log2FC values between the two tissues ###
+
+library(VennDiagram)
+library(grid)
+
+### Gill transplant origin DM CpG overlaps
+gill_origin      <- 121   # area 1
+gill_transplant  <- 211   # area 2
+gill_ori_trans   <- 56    # intersection (area1 ∩ area2)
+
+png("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/gill_venn.png",
+    width = 8, height = 8, units = "in", res = 300)
+
+grid.newpage()
+venn.plot <- draw.pairwise.venn(
+  area1      = gill_origin,
+  area2      = gill_transplant,
+  cross.area = gill_ori_trans,          # intersection for pairwise
+  category   = c("Origin", "Transplant"),
+  fill       = c("#e68d4e"), # length 2 for two sets
+  alpha      = c(0.4, 0.4),
+  lwd        = 0,
+  cex        = 0,                     # counts size
+  cat.cex    = 0,                       # hide labels (as in your code)
+  cat.col    = "black",
+  cat.dist   = c(0.05, 0.05)            # length 2 for two sets
+)
+
+grid.draw(venn.plot)
+dev.off()
+
+
+### Foot transplant origin DM CpG overlaps
+
+foot_origin      <- 93   # area 1
+foot_transplant  <- 124   # area 2
+foot_ori_trans   <- 24    # intersection (area1 ∩ area2)
+
+png("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/foot_venn.png",
+    width = 8, height = 8, units = "in", res = 300)
+
+grid.newpage()
+venn.plot <- draw.pairwise.venn(
+  area1      = foot_origin,
+  area2      = foot_transplant,
+  cross.area = foot_ori_trans,          # intersection for pairwise
+  category   = c("Origin", "Transplant"),
+  fill       = c("#3bbdcc"), # length 2 for two sets
+  alpha      = c(0.4, 0.4),
+  lwd        = 0,
+  cex        = 0,                     # counts size
+  cat.cex    = 0,                       # hide labels (as in your code)
+  cat.col    = "black",
+  cat.dist   = c(0.05, 0.05)            # length 2 for two sets
+)
+
+grid.draw(venn.plot)
+dev.off()
+
+
+### intersection between gill and foot transplant
+
+intersect(unique(merged_all_DM_foot$combined), unique(merged_all_DM_gill$combined))
+
+library(VennDiagram)
+library(grid)
+library(VennDiagram)
+library(grid)
+
+foot_only <- 124
+gill_only <- 211
+shared    <- 0   # set to the true overlap if > 0
+
+png("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/gill_foot_venn.png",
+    width = 8, height = 8, units = "in", res = 300)
+
+grid.newpage()
+venn.plot <- draw.pairwise.venn(
+  area1 = foot_only,               
+  area2 = gill_only,                
+  cross.area = shared,
+  category = c("Foot", "Gill"),     
+  fill = c("#3bbdcc","#e68d4e"),   
+  alpha = 0.5,
+  lwd = 0,
+  cat.cex = 0,
+  cex = 0,
+  cat.col = "black",
+  rotation.degree = 180,
+  scaled = TRUE,
+  cat.dist = c(0.025, 0.025)
+)
+
+dev.off()
+
+
+#### Pearson's correlation between all logFC in foot and gills ####
+
+#load data
+gill_all_logfc<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/gill_unique_all_CpG.csv")
+foot_all_logfc<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/foot_unique_all_CpG.csv")
+
+transplant_logfc_gill<-gill_all_logfc %>% 
+  filter(Treat=="Transplant")
+origin_logfc_gill<-gill_all_logfc %>% 
+  filter(Treat=="Origin")
+
+transplant_logfc_foot<-foot_all_logfc %>% 
+  filter(Treat=="Transplant")
+origin_logfc_foot<-foot_all_logfc %>% 
+  filter(Treat=="Origin")
+
+
+### Pivot both tissues wide by Treat
+foot_wide <- foot_all_logfc %>%
+  dplyr::select(sample, Treat, logFC) %>%
+  pivot_wider(names_from = Treat, values_from = logFC, names_prefix = "Foot_")
+
+gill_wide <- gill_all_logfc %>%
+  dplyr::select(sample, Treat, logFC) %>%
+  pivot_wider(names_from = Treat, values_from = logFC, names_prefix = "Gill_")
+
+### Join on sample (gene ID)
+merged <- inner_join(foot_wide, gill_wide, by = "sample")
+
+
+### Scatterplot: Foot vs Gill for Transplant
+transplant_cor <-
+  ggplot(merged, aes(x = Gill_Transplant, y = Foot_Transplant)) +
+  geom_point(alpha = 0.5, color = "black", size =1.3, stroke = 0) +
+  geom_smooth(
+    method = "lm",
+    se = FALSE,
+    col="red",
+    fill = "grey",
+    size =1,
+    alpha =1) + theme_few() +
+  labs(x = "Gills log2FC ",
+       y = "Foot log2FC ") +
+  theme_few(base_size = 15 )+
+  ggpubr::stat_cor(method = "pearson",
+                   label.x.npc = "left",  # place at top-left; use "right" for top-right
+                   label.y.npc = "top",
+                   size = 4)
+
+
+transplant_cor
+
+# ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/transplant_cor_foot_gill.png",transplant_cor, height = 4, width=5)
+
+# Scatterplot: Foot vs Gill for Origin
+origin_cor<-ggplot(merged, aes(x = Gill_Origin, y = Foot_Origin)) +
+  geom_point(alpha = 0.5, color = "black", size =1.3, stroke = 0) +
+  geom_smooth(
+    method = "lm",
+    se = FALSE,
+    col="red",
+    fill = "grey",
+    size =1,
+    alpha =1) +
+  labs(x = "Gills log2FC ",
+       y = "Foot log2FC ") +
+  theme_few(base_size = 20 )+
+  ggpubr::stat_cor(method = "pearson",
+                   label.x.npc = "left",  # place at top-left; use "right" for top-right
+                   label.y.npc = "top",
+                   size = 8)
+
+
+origin_cor
+# ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/origin_cor_foot_gill.png",origin_cor, height =8, width=12)
+
+### Test if there's any correlation in all log2FC of CpGs between tissues ###
+cor_test <- cor.test(merged$Foot_Origin, merged$Gill_Origin, method = "pearson")
+cor_test
+
+cor_test <- cor.test(merged$Foot_Transplant, merged$Gill_Transplant, method = "pearson")
+cor_test

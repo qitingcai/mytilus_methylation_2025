@@ -16,7 +16,8 @@ library(GenomicRanges)
 library(lme4)
 library(emmeans)
 library(ggthemes)
-
+library(rstatix)
+library(coin)
 ```
 
 ```{r}
@@ -46,16 +47,6 @@ Coverage <- Me + Un
 # Prefiltered total # of CpGs sequenced: colSums(Coverage > 0, na.rm = TRUE) 
 head(Coverage)
 
-### Calculating prefiltered genome-wide coverage - Replace zeros with NA so they're excluded in mean
-# Coverage[Coverage == 0] <- NA
-# # Compute mean per column, excluding NA (formerly zero)
-# mean_coverage <- colMeans(Coverage, na.rm = TRUE)
-# mean_coverage
-
-### Calculating average genome wide methylation percentage prefiltering
-# prop_meth_matrix_foot_prefilter <- Me /(Un+Me)
-# colMeans(prop_meth_matrix_foot_prefilter,na.rm=TRUE)*100
-
 ## Calculating # of unique CpGs 
 # covered_per_cpg <- rowSums(Coverage > 0, na.rm = TRUE)
 # sum(covered_per_cpg > 0) # 1946085
@@ -78,7 +69,7 @@ y_foot$samples
 Me_foot <- y_foot$counts[, Methylation=="Me"]
 Un_foot <- y_foot$counts[, Methylation=="Un"]
 
-### Calculating prefiltered genome-wide coverage 
+### Calculating postfiltered genome-wide coverage 
 # Coverage_postfilter<-Un_foot + Me_foot
 # Coverage_postfilter[Coverage_postfilter == 0] <- NA
 # mean_coverage_postfilter <- colMeans(Coverage_postfilter, na.rm = TRUE)
@@ -180,6 +171,9 @@ wilcox.test(lrt_trans_foot$table$logFC, mu = 0, alternative = "greater")
 wilcox.test(lrt_origin_foot$table$logFC, mu = 0, alternative = "less") 
 wilcox.test(lrt_origin_foot$table$logFC, mu = 0, alternative = "greater")  
 
+wilcox_effsize(data = lrt_trans_foot$table,
+  formula = logFC ~ 1, mu = 0)
+
 ### Merge origin site and transplant site coefficients ###
 all_CpG_dm_foot <- rbind( lrt_origin_foot$table,
                      lrt_trans_foot$table )
@@ -248,7 +242,7 @@ p1_foot <- p1_foot + coord_cartesian(xlim = common_xlim, ylim = common_ylim)
 p2_foot <- p2_foot + coord_cartesian(xlim = common_xlim, ylim = common_ylim)
 
 # Stack vertically with shared layout
-foot_volcano<-p2_foot / p1_foot  # This uses patchwork
+foot_volcano <- p2_foot / p1_foot  # This uses patchwork
 foot_volcano
 
 #ggsave("foot_volcano.png", foot_volcano, width = 10, height = 12, dpi = 300)
@@ -273,6 +267,9 @@ exon_GRange<-all_GRange %>%
 intron_GRange<-all_GRange %>% 
   filter(type == c
          ("intron")) 
+
+UTR_GRange <- all_GRange %>%
+  filter(type %in% c("five_prime_UTR", "three_prime_UTR"))
          
 ### Code to find PROMOTER REGIONS: defined as 1kb downstream or upstream of first exons of all genes ###
 
@@ -418,6 +415,33 @@ mcols(intron_subset_foot)$gene_id <- intron_subset_gene_id_foot
 intron_subset_gene_id_df_foot<-as.data.frame(intron_subset_foot)
 intron_subset_gene_id_df_foot$combined <- paste(intron_subset_gene_id_df_foot$seqnames, intron_subset_gene_id_df_foot$start, sep = "-") #reformat
 
+
+### UTR subset ###
+utr_subset_foot<-subsetByOverlaps(CpGs_foot, UTR_GRange)
+#intron_subset_foot<-as.data.frame(intron_subset_foot) 
+
+### Adding gene id ###
+utr_gff <- subset(all_GRange, type %in% c("five_prime_UTR", "three_prime_UTR")) #need to be GRange object to subset
+mcols(intron_gff)
+utr_id_overlaps_foot <- findOverlaps(utr_subset_foot, utr_gff)
+
+### Extract gene_id for matching UTRs from the GFF file ###
+gene_ids_foot<- mcols(utr_gff)$gene[subjectHits(utr_id_overlaps_foot)]
+query_hits <- queryHits(utr_id_overlaps_foot)
+
+### Add gene_id only to those rows in utr_subset that have corresponding overlaps ###
+### Initialize with NA for those rows that have no overlap ###
+utr_subset_gene_id_foot <- rep(NA, length(utr_subset_foot))
+
+### Assign the gene_ids where there is a match ###
+utr_subset_gene_id_foot[query_hits] <- gene_ids_foot
+
+### Add gene_id as a metadata column to utr_subset df ###
+mcols(utr_subset_foot)$gene_id <- utr_subset_gene_id_foot
+utr_subset_gene_id_df_foot<-as.data.frame(utr_subset_foot)
+utr_subset_gene_id_df_foot$combined <- paste(utr_subset_gene_id_df_foot$seqnames, utr_subset_gene_id_df_foot$start, sep = "-") #reformat
+
+
 ### Find promoter overlaps with CpG using the adjusted ranges ###
 promoter_GRange_foot <- findOverlaps(CpGs_foot, promoters_Grange)
 
@@ -503,6 +527,9 @@ intergenic_subset_foot<-interg_subset_df_foot %>%
 promoter_subset_foot<-promoter_subset_gene_id_df_foot %>% 
   mutate(feature = "promoter") #1976 obs
 
+utr_subset_foot<-utr_subset_gene_id_df_foot %>% 
+  mutate(feature = "UTR") #862 obs
+
 ### Finding CpG subsets overlapped with exons ###  
 exon<- CpGsite_foot %>%
   full_join(exon_subset_foot, by = c("Chr" = "seqnames", "Locus" = "start")) %>%
@@ -523,8 +550,13 @@ promoter<-CpGsite_foot %>%
   full_join(promoter_subset_foot, by = c("Chr" = "seqnames", "Locus" = "start")) %>%
 na.omit()
 
+### Finding CpG subsets overlapped with UTR regions ###
+utr<-CpGsite_foot %>%
+  full_join(utr_subset_foot, by = c("Chr" = "seqnames", "Locus" = "start")) %>%
+na.omit()
+
 ### Combining all the CpG subsets ###
-df_CpGsite_foot_all <- bind_rows(exon, intron, intergenic, promoter)
+df_CpGsite_foot_all <- bind_rows(exon, intron, intergenic, promoter,utr)
 
 ### Adding methylation information for foot transplant to the dataframe ###
 df_combined_foot_trans <- df_trans%>% 
@@ -549,12 +581,12 @@ df_combined_foot_trans <- df_trans%>%
    df_combined_foot_trans_df_DM <-df_combined_foot_trans_df %>% 
      filter(Meth.x==1)
 
-glmer <- glmer(Meth.x ~ feature + (1 | gene_id), data =  df_combined_foot_trans_df, family = binomial(link = "logit"))
-summary(glmer)
-car::Anova(glmer, type ="III",test.statistic="Chisq")
+glm <- glm(Meth.x ~ feature , data =  df_combined_foot_trans_df, family = binomial(link = "logit"))
+summary(glm)
+car::Anova(glm, type ="III",test.statistic="LR")
 
 #pairwise comparison
-emmeans(glmer, pairwise ~ feature, type="response")
+emmeans(glm, pairwise ~ feature, type="response")
 
 ### DM CpGs associated with origin site effect, separating columns into chromosome and locus ###
 DM_Origin_foot <- separate(DM_Origin_foot, sample, into = c("Chr", "Locus"), sep = "-")
@@ -595,13 +627,13 @@ df_combined_foot_origin_df_DM <-df_combined_foot_origin_df %>%
 ### no DM on promoter regions, thus excluding all the promoter entries for the GLM tests
 df_combined_foot_origin_df <- df_combined_foot_origin_df %>% filter(feature != "promoter")
 
-glmer <-glmer(Meth.x ~ feature + (1 | gene_id),
+glm <-glm(Meth.x ~ feature ,
               data =  df_combined_foot_origin_df, 
               family = binomial(link = "logit"))
-summary(glmer)
-car::Anova(glmer, type = "III", test.statistic = "Chisq")
+summary(glm)
+car::Anova(glm, type = "III", test.statistic = "LR")
 
-emmeans(glmer, pairwise ~ feature, type="response")
+emmeans(glm, pairwise ~ feature, type="response")
 
 ## getting length associated DM CpG information
 

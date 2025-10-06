@@ -1,5 +1,4 @@
-
-# GO enrichments using Mann Whitney U tests
+### Aim of this script: GO enrichments using Mann Whitney U tests
 setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/MethylMussel_GO/GO_MWU/")
 
 
@@ -27,7 +26,6 @@ goAnnotations="GO_gill_df.tab" # two-column, tab-delimited, one line per gene, m
 goDatabase="/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/MethylMussel_GO/GO_MWU/go.obo" # download from http://www.geneontology.org/GO.downloads.ontology.shtml
 goDivision="MF" # either MF, or BP, or CC
 source("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/MethylMussel_GO/GO_MWU/gomwu.functions.R")
-
 
 nrow(input)  # Check number of rows
 length(rownames(input)) 

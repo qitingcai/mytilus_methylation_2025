@@ -16,6 +16,8 @@ library(GenomicRanges)
 library(lme4)
 library(emmeans)
 library(ggthemes)
+library(rstatix)
+library(coin)
 ```
 
 ```{r}
@@ -45,19 +47,9 @@ Coverage <- Me + Un
 # Prefiltered total # of CpGs sequenced: colSums(Coverage > 0, na.rm = TRUE) 
 head(Coverage)
 
-### Calculating prefiltered genome-wide coverage - Replace zeros with NA so they're excluded in mean
-# Coverage[Coverage == 0] <- NA
-# # Compute mean per column, excluding NA (formerly zero)
-# mean_coverage <- colMeans(Coverage, na.rm = TRUE)
-# mean_coverage
-
-### Calculating average genome wide methylation percentage prefiltering
-# prop_meth_matrix_gill_prefilter <- Me /(Un+Me)
-# colMeans(prop_meth_matrix_gill_prefilter,na.rm=TRUE)*100
-
-## Calculating # of unique CpGs 
-# covered_per_cpg <- rowSums(Coverage > 0, na.rm = TRUE)
-# sum(covered_per_cpg > 0) # 1946085
+## Calculating # of unique CpGs
+covered_per_cpg <- rowSums(Coverage > 0, na.rm = TRUE)
+sum(covered_per_cpg > 0) # 2,485,629
 
 ### Filtering to only include samples with a coverage of at least 3, for 66% of samples, total of 14 samples ###
 n=3
@@ -77,7 +69,7 @@ y_gill$samples
 Me_gill <- y_gill$counts[, Methylation=="Me"]
 Un_gill <- y_gill$counts[, Methylation=="Un"]
 
-### Calculating prefiltered genome-wide coverage 
+### Calculating post-filtered genome-wide coverage 
 # Coverage_postfilter<-Un_gill + Me_gill
 # Coverage_postfilter[Coverage_postfilter == 0] <- NA
 # mean_coverage_postfilter <- colMeans(Coverage_postfilter, na.rm = TRUE)
@@ -179,6 +171,12 @@ wilcox.test(lrt_trans_gill$table$logFC, mu = 0, alternative = "greater")   #p-va
 wilcox.test(lrt_origin_gill$table$logFC, mu = 0, alternative = "less") #p-value < 2.2e-16
 wilcox.test(lrt_origin_gill$table$logFC, mu = 0, alternative = "greater")  
 
+effet_size <- wilcox_effsize(data = lrt_trans_gill$table,
+  formula = logFC ~ 1, mu = 0) #effect size 0.06989023
+
+wilcox_effsize(data = lrt_origin_gill$table,
+  formula = logFC ~ 1, mu = 0)  #effect size: 0.0512613
+
 ### Merge origin site and transplant site coefficients ###
 all_CpG_dm_gill <- rbind( lrt_origin_gill$table,
                      lrt_trans_gill$table )
@@ -250,7 +248,7 @@ p1_gill <- p1_gill + coord_cartesian(xlim = common_xlim, ylim = common_ylim)
 p2_gill <- p2_gill + coord_cartesian(xlim = common_xlim, ylim = common_ylim)
 
 # Stack vertically with shared layout
-gill_volcano<-p2_gill / p1_gill  # This uses patchwork
+gill_volcano <- p2_gill / p1_gill  # This uses patchwork
 gill_volcano
 
 #ggsave("gill_volcano.png", gill_volcano, width = 10, height = 12, dpi = 300)
@@ -275,6 +273,10 @@ exon_GRange<-all_GRange %>%
 intron_GRange<-all_GRange %>% 
   filter(type == c
          ("intron")) 
+
+UTR_GRange <- all_GRange %>%
+  filter(type %in% c("five_prime_UTR", "three_prime_UTR"))
+         
          
 ### Code to find PROMOTER REGIONS: defined as 1kb downstream or upstream of first exons of all genes ###
 
@@ -420,6 +422,32 @@ mcols(intron_subset_gill)$gene_id <- intron_subset_gene_id_gill
 intron_subset_gene_id_df_gill<-as.data.frame(intron_subset_gill)
 intron_subset_gene_id_df_gill$combined <- paste(intron_subset_gene_id_df_gill$seqnames, intron_subset_gene_id_df_gill$start, sep = "-") #reformat
 
+### UTR subset ###
+utr_subset_gill<-subsetByOverlaps(CpGs_gill, UTR_GRange)
+#intron_subset_gill<-as.data.frame(intron_subset_gill) 
+
+### Adding gene id ###
+utr_gff <- subset(all_GRange, type %in% c("five_prime_UTR", "three_prime_UTR")) #need to be GRange object to subset
+mcols(intron_gff)
+utr_id_overlaps_gill <- findOverlaps(utr_subset_gill, utr_gff)
+
+### Extract gene_id for matching UTRs from the GFF file ###
+gene_ids_gill<- mcols(utr_gff)$gene[subjectHits(utr_id_overlaps_gill)]
+query_hits <- queryHits(utr_id_overlaps_gill)
+
+### Add gene_id only to those rows in utr_subset that have corresponding overlaps ###
+### Initialize with NA for those rows that have no overlap ###
+utr_subset_gene_id_gill <- rep(NA, length(utr_subset_gill))
+
+### Assign the gene_ids where there is a match ###
+utr_subset_gene_id_gill[query_hits] <- gene_ids_gill
+
+### Add gene_id as a metadata column to utr_subset df ###
+mcols(utr_subset_gill)$gene_id <- utr_subset_gene_id_gill
+utr_subset_gene_id_df_gill<-as.data.frame(utr_subset_gill)
+utr_subset_gene_id_df_gill$combined <- paste(utr_subset_gene_id_df_gill$seqnames, utr_subset_gene_id_df_gill$start, sep = "-") #reformat
+
+
 ### Find promoter overlaps with CpG using the adjusted ranges ###
 promoter_GRange_gill <- findOverlaps(CpGs_gill, promoters_Grange)
 
@@ -504,6 +532,9 @@ intergenic_subset_gill<-interg_subset_df_gill %>%
 promoter_subset_gill<-promoter_subset_gene_id_df_gill %>% 
   mutate(feature = "promoter") #1990 obs
 
+utr_subset_gill<-utr_subset_gene_id_df_gill %>%
+  mutate(feature = "UTR") #801
+
 ### Finding CpG subsets overlapped with exons ###  
 exon<- CpGsite_gill %>%
   full_join(exon_subset_gill, by = c("Chr" = "seqnames", "Locus" = "start")) %>%
@@ -524,8 +555,12 @@ promoter<-CpGsite_gill %>%
   full_join(promoter_subset_gill, by = c("Chr" = "seqnames", "Locus" = "start")) %>%
 na.omit()
 
+### Finding CpG subsets overlapped with UTRs ###
+utr <-CpGsite_gill %>%
+  full_join(utr_subset_gill, by = c("Chr" = "seqnames", "Locus" = "start")) %>% na.omit()
+
 ### Combining all the CpG subsets ###
-df_CpGsite_gill_all <- bind_rows(exon, intron, intergenic, promoter)
+df_CpGsite_gill_all <- bind_rows(exon, intron, intergenic, promoter, utr)
 
 ### Adding methylation information for gill transplant to the dataframe ###
 df_combined_gill_trans <- df_trans%>% 
@@ -550,12 +585,12 @@ df_combined_gill_trans <- df_trans%>%
    df_combined_gill_trans_df_DM <-df_combined_gill_trans_df %>% 
      filter(Meth.x==1)
 
-glmer <- glmer(Meth.x ~ feature + (1 | gene_id), data =  df_combined_gill_trans_df, family = binomial(link = "logit"))
-summary(glmer)
-car::Anova(glmer, type ="III",test.statistic="Chisq")
+glm <- glm(Meth.x ~ feature , data =  df_combined_gill_trans_df, family = binomial(link = "logit"))
+summary(glm)
+car::Anova(glm, type ="III",test.statistic="LR")
 
 #pairwise comparison
-emmeans(glmer, pairwise ~ feature, type="response")
+emmeans(glm, pairwise ~ feature, type="response")
 
 ### DM CpGs associated with origin site effect, separating columns into chromosome and locus ###
 DM_Origin_gill <- separate(DM_Origin_gill, sample, into = c("Chr", "Locus"), sep = "-")
@@ -593,13 +628,15 @@ df_combined_gill_origin_df$feature <-
 df_combined_gill_origin_df_DM <-df_combined_gill_origin_df %>% 
      filter(Meth.x==1) 
 
-glmer <-glmer(Meth.x ~ feature + (1 | gene_id),
+
+glm <-glm(Meth.x ~ feature ,
               data =  df_combined_gill_origin_df, 
               family = binomial(link = "logit"))
-summary(glmer)
-car::Anova(glmer, type = "III", test.statistic = "Chisq")
+summary(glm)
+car::Anova(glm, type = "III", test.statistic = "LR")
 
-emmeans(glmer, pairwise ~ feature, type="response")
+emmeans(glm, pairwise ~ feature, type="response")
+
 
 ## getting length associated DM CpG information
 
@@ -770,7 +807,6 @@ shared_combined <- intersect(origin_combined, transplant_combined)
 length(shared_combined)
 #56
 
-
 #### Making input file for glm ###
 # Ensure all three data frames have the same column names
 colnames(updated_origin_gene_unique) <- colnames(updated_transplant_gene_unique)
@@ -801,9 +837,6 @@ average_lfc_DM_origin_gill<-updated_origin_gene_unique %>%
  # 
  #  write_csv(average_lfc_DM_origin_gill,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/MethylMussel_GO/GO_MWU/average_lfc_DM_gill_origin.csv")
 # 
-
-
-
 
 ```
 
@@ -1110,7 +1143,7 @@ enriched.GO <- GO.wall$category[p.adjust(GO.wall$over_represented_pvalue, method
  head(enriched.GO)
  #character(0)
  
- write_csv(GO.wall, "goseq_origin.csv")
+ #write_csv(GO.wall, "goseq_origin.csv")
 
 ```
 

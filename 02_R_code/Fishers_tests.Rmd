@@ -250,7 +250,6 @@ enrichment_results
 library(dplyr)
 library(tidyr)
 
-
 dm_long <- dm_bar_plot %>%
   dplyr::select(feature, tissue, Type, DM_count, nonDM_count, Total) %>%
   pivot_longer(
@@ -269,7 +268,6 @@ dm_long <- dm_bar_plot %>%
   # Filter out nonDM if desired
   filter(Categories != "nonDM_count")
 
-
 dm_long <- dm_long %>%
   mutate(
     Type_Categories = recode(Type_Categories,
@@ -278,20 +276,16 @@ dm_long <- dm_long %>%
                              "Interacton_DM_count" = "Interaction",
                              "Total" = "Total"))
 
-
 dm_long <- dm_long %>%
   mutate(
     Type_Categories = factor(Type_Categories, levels = c("Origin", "Transplant", "Interaction", "Total"))
   )
 
-
 foot<-dm_long %>% 
   filter(tissue=="Foot") 
 
-
 gill<-dm_long %>% 
   filter(tissue=="Gills") 
-
 
 p1 <- ggplot(foot, aes(x = Type_Categories, y = Count, fill = feature)) +
   geom_bar(stat = "identity", position = "fill") +
@@ -342,8 +336,6 @@ p2 <- ggplot(gill, aes(x = Type_Categories, y = Count, fill = feature)) +
   )
 p2
 
-
-
 # Add margin to ensure y-axis label is visible
 p1_clean <- p1 +
   theme(
@@ -387,10 +379,9 @@ combined
 
 
 
-##### LM to test log2FC differences between tissues
+##### LM to test log2FC differences between tissues ######
 
 ##### see if log2FC of DM differ between treatment and tissues
-
 
 #### load in log2FC data
 merged_all_DM_gill<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/merged_all_DM_gill.csv") %>% mutate(tissue ="Gill")

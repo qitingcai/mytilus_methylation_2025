@@ -1,3 +1,4 @@
+### Aim of this script: foot DM analyses using the interaction model ###
 ```{r}
 ### Set working directory, include all (top5 for each treatments) foot coverage files ###
 setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot_final")

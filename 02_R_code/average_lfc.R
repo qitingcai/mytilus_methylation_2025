@@ -1,5 +1,4 @@
-### Aim of this script: generating average log fold change values for each gene that overlaps with CpGs ###
-
+### Aim of this script: generating average log fold change values for each gene that overlaps with CpGs for use in GOMWU ###
 
 ### Foot subset ###
 
