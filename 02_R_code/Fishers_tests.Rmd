@@ -1,4 +1,4 @@
-### Aim of this script: make bar plots that shows the proportion of CpGs or DM CpGs that fall into each genomic feature ###
+### Aim of this script: make Fig 5 bar plots that shows the proportion of CpGs or DM CpGs that fall into each genomic feature ###
 ### Run Fisher's exact tests to compare distribution of each genomic feature within tissues, and to compare log2FC of DM CpGs between tissue types for each treatment ###
 
 dm_bar_plot<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/fisher_test_input_final.csv")
