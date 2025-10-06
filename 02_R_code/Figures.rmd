@@ -94,7 +94,7 @@ all_length<-meta_data %>%
             by=c("meth"="sample.ID",
                  "tissue"="Tissue")) %>% 
   dplyr::select(sample,meth,tissue,origin_site,transplant_site,GROUP_CODE.x,
-         LENGTH_INIT..mm.,LENGTH_FINAL..mm.)
+                LENGTH_INIT..mm.,LENGTH_FINAL..mm.)
 # write_csv(all_length,"sample_65_wlength.csv")
 
 ##getting the PC contributions
@@ -123,8 +123,6 @@ ggplot(pc, aes(PC, prop * 100)) +
        y = "% Variance Explained",
        title = "") +
   theme_minimal()
-
-
 
 ggplot(pc, aes(PC, prop * 100)) +
   geom_col() +
@@ -219,107 +217,24 @@ pca_imputated_merged
 
 ##### calculating Euclidean distance between tissues ###
 
-## formatting
-edistance<-pca_scores %>% 
-  select(X, PC1,PC2, Tissue)
-
-edistance$SampleID <- rownames(edistance)
-rownames(edistance) <- NULL
-
-edistance$SampleID  <- gsub("^X", "", edistance$SampleID  )
-
-##calculating distance between the same individual
-
-same_indiv_distances <- edistance %>%
-  group_by(X) %>%
-  filter(dplyr::n() == 2) %>%  
-  arrange(X, Tissue) %>%
-  summarise(distance = sqrt((PC1[1] - PC1[2])^2 + (PC2[1] - PC2[2])^2)) %>%
-  pull(distance)
-
-mean_same_indiv <- mean(same_indiv_distances)
-print(mean_same_indiv)
-
-
-###calculating distance between different individuals
-
-coords <- edistance %>%
-  select(X, Tissue, PC1, PC2)
-
-# making all pairwise combinations
-pair_indices <- combn(nrow(coords), 2)
-
-#between differnt tissues of different individuals
-between_distances <- apply(pair_indices, 2, function(idx) {
-  i <- idx[1]
-  j <- idx[2]
-  
-  if (coords$X[i] != coords$X[j]) {   # only between individuals
-    dist <- sqrt((coords$PC1[i] - coords$PC1[j])^2 +
-                   (coords$PC2[i] - coords$PC2[j])^2)
-    
-    # record tissue info for later summaries
-    data.frame(
-      id1 = coords$X[i],
-      id2 = coords$X[j],
-      tissue1 = coords$Tissue[i],
-      tissue2 = coords$Tissue[j],
-      distance = dist
-    )
-  } else {
-    NULL
-  }
-})
-
-
-between_df <- do.call(rbind, between_distances)
-
-scores19 <- as.matrix(pc_variance[paste0("PC", 1:19)])
-D <- dist(scores19, method = "euclidean")
-
-
-between_distances <- na.omit(between_df )
-mean_diff_indiv <- mean(between_distances$distance)
-
-##using a mantel test
-edistance<-pca_scores %>% 
-  select(X, PC1, PC2, Tissue)
-
-
 pca_dist <- dist(pca_scores[, paste0("PC", 1:19)], method = "euclidean")
 
 # Look at the result
 pca_dist
 
-# PCA distance matrix across all samples 19 PCs
-pca_dist_19 <- dist(pca_dist, method = "euclidean")
+# 0 if same individual, 1 if different
+id_dist <- as.dist( outer(pca_scores$X, pca_scores$X,
+                          function(a,b) as.integer(a != b)) )
 
-mantel_test <- mantel(pca_dist_19, id_dist,
+mantel_test <- mantel(pca_dist, id_dist,
                       method = "pearson", permutations = 999)
 
 mantel_test
 
-# PCA distance matrix across all samples for PC1 and PC2
-pca_dist <- dist(edistance[, c("PC1","PC2")])
-
-# 0 if same individual, 1 if different
-id_dist <- as.dist( outer(edistance$X, edistance$X,
-                          function(a,b) as.integer(a != b)) )
-
-mantel_test <- mantel(pca_dist, id_dist,
-                    method = "pearson", permutations = 999)
-
-mantel_test
 
 ##### regressing PC1 and length
 
 length_data<-read_csv("sample_65_wlength.csv")
-
-#using imp_scores, has all the loading data for 69 or 56 samples
-# pca_scores$X<-pca_scores$X%>% 
-#   gsub("^X", "", .) %>%        # Remove the initial "X"
-#   gsub("_.*$", "", .) %>% 
-#   gsub("\\.", "-", .)  
 
 colnames(length_data)[1] <- "sample_name"
 PC <- length_data %>% 
@@ -328,6 +243,7 @@ PC <- length_data %>%
 #remotes::install_version("MuMIn", "1.46.0")
 # install.packages("performance")
 library(MuMIn)
+
 # library(performance)
 # lm_length_old<-lm(PC1~`LENGTH_FINAL (mm)` + Tissue.x, data=PC)
 lm_length_PC1<-lmer(PC1~`LENGTH_FINAL..mm.` + tissue.x + (1|`meth.x`), data=PC)

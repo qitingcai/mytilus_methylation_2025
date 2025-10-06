@@ -1,0 +1,268 @@
+### Aim of this script: finding correlation among logFC between no interaction vs. interaction models in gill and foot for both transplant and origin effects ###
+
+### first find correlation between the log2fc  between two tissues
+
+### load log2FC from models without interaction terms ###
+all_CpG_dm_gill<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/gill_unique_all_CpG.csv") %>% 
+  mutate(tissue = "gill",
+         model ="no_interaction")
+all_CpG_dm_foot<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/foot_unique_all_CpG.csv") %>% 
+  mutate(tissue ="foot",
+         model = "no_interaction")
+
+### find transplant and origin effect CpGs ###
+### gill
+trans_cpg_dm_no_interact_gill<-all_CpG_dm_gill %>% 
+  filter(Treat=="Transplant")
+
+origin_cpg_dm_no_interact_gill<-all_CpG_dm_gill %>% 
+  filter(Treat=="Origin")
+
+### foot
+trans_cpg_dm_no_interact_foot<-all_CpG_dm_foot %>%
+  filter(Treat=="Transplant")
+origin_cpg_dm_no_interact_foot<-all_CpG_dm_foot %>%
+  filter(Treat=="Origin")
+
+
+### load log2FC from models with interaction terms ###
+interaction_all_CpG_dm_foot<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/foot_interaction_all_CpG_dm.csv") %>% 
+  mutate(tissue ="foot",
+         model = "interaction")
+interaction_all_CpG_dm_gill<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/gill_interaction_all_CpG_dm.csv") %>% 
+  mutate(tissue = "gill",
+         model="interaction")
+
+
+## find transplant and origin effect CpGs ###
+
+### gill
+trans_cpg_dm_interact_gill<-interaction_all_CpG_dm_gill %>% 
+  filter(Treat=="Transplant")
+origin_cpg_dm_interact_gill<-interaction_all_CpG_dm_gill %>% 
+  filter(Treat=="Origin")
+
+### foot
+trans_cpg_dm_interact_foot<-interaction_all_CpG_dm_foot %>% 
+  filter(Treat=="Transplant")
+origin_cpg_dm_interact_foot<-interaction_all_CpG_dm_foot %>% 
+  filter(Treat=="Origin")
+
+
+# Pivot both tissues wide by Treat
+
+### gill transplant
+gill_trans <- inner_join(trans_cpg_dm_interact_gill, trans_cpg_dm_no_interact_gill , by = "sample",  suffix = c("_interact", "_noInt") )
+
+### gill origin
+gill_origin <- inner_join(origin_cpg_dm_interact_gill, origin_cpg_dm_no_interact_gill , by = "sample" , suffix = c("_interact", "_noInt") )
+
+### foot transplant
+foot_trans <- inner_join(trans_cpg_dm_interact_foot, trans_cpg_dm_no_interact_foot , by = "sample",  suffix = c("_interact", "_noInt") )
+
+### foot origin
+foot_origin <- inner_join(origin_cpg_dm_interact_foot, origin_cpg_dm_no_interact_foot , by = "sample",  suffix = c("_interact", "_noInt") )
+
+
+### foot origin
+origin_foot_cor<-ggplot(foot_origin, aes(x = logFC_interact, y = logFC_noInt)) +
+  geom_point(alpha = 0.5, color = "black", size =1.3, stroke = 0) +
+  geom_smooth(method = "lm", se = TRUE, col="red",    
+              fill = "grey",
+              size =1,
+              alpha =1) +
+  labs(
+    x = " ",
+    y ="Log2FC (no interaction) ", size =10
+  ) + theme_few()
+# +
+#   ggpubr::stat_cor(method = "pearson",
+#                    label.x.npc = "left",  # place at top-left; use "right" for top-right
+#                    label.y.npc = "top",
+#                    size = 4)
+origin_foot_cor
+# ggsave("origin_cor_foot_gill.png",origin_cor, height=5, width=8)
+
+cor_test <- cor.test(foot_origin$logFC_interact, foot_origin$logFC_noInt, method = "pearson")
+cor_test
+
+# foot transplant
+trans_foot_cor<-ggplot(foot_trans, aes(x = logFC_interact, y = logFC_noInt)) +
+  geom_point(alpha = 0.5, color = "black", size =1.3, stroke = 0) +
+  geom_smooth(method = "lm", se = TRUE,  col="red",
+              fill = "grey",
+              size =1,
+              alpha =1) +
+  labs(
+    x = " ",
+    y =" ", size =13
+  ) + theme_few()
+# +
+#   ggpubr::stat_cor(method = "pearson",
+#                    label.x.npc = "left",  # place at top-left; use "right" for top-right
+#                    label.y.npc = "top",
+#                    size = 4)
+
+trans_foot_cor
+
+cor_test <- cor.test(foot_trans$logFC_interact, foot_trans$logFC_noInt, method = "pearson")
+cor_test
+
+# gill origin
+origin_gill_cor<-ggplot(gill_origin, aes(x = logFC_interact, y = logFC_noInt)) +
+  geom_point(alpha = 0.5, color = "black", size =1.3, stroke = 0) +
+  geom_smooth(method = "lm", se = TRUE, col="red",
+              fill = "grey",
+              size =1,
+              alpha =1) +
+  labs(
+    x = "Log2FC (with interaction) ",
+    y ="Log2FC (no interaction) ", size =10
+  ) + theme_few()
+# +
+#   ggpubr::stat_cor(method = "pearson",
+#                    label.x.npc = "left",  # place at top-left; use "right" for top-right
+#                    label.y.npc = "top",
+#                    size = 4)
+
+origin_gill_cor
+# ggsave("origin_cor_foot_gill.png",origin_cor, height=5, width=8)
+
+cor_test <- cor.test(gill_origin$logFC_interact, gill_origin$logFC_noInt, method = "pearson")
+cor_test
+
+
+# gill transplant
+trans_gill_cor<-ggplot(gill_trans, aes(x = logFC_interact, y = logFC_noInt)) +
+  geom_point(alpha = 0.5, color = "black", size =1.3, stroke = 0) +
+  geom_smooth(method = "lm", se = TRUE,   col="red",
+              fill = "grey",
+              size =1,
+              alpha =1) +
+  theme_few()+
+  labs(
+    x = "Log2FC (with interaction) ",
+    y =" ", size =10
+  ) 
+# +
+#   ggpubr::stat_cor(method = "pearson",
+#                    label.x.npc = "left",  # place at top-left; use "right" for top-right
+#                    label.y.npc = "top",
+#                    size = 4)
+
+trans_gill_cor
+
+cor_test <- cor.test(gill_trans$logFC_interact, gill_trans$logFC_noInt, method = "pearson")
+cor_test
+
+common_xlim <- c(-15, 10)
+common_ylim <- c(-15, 8)
+
+corner_stat <- function(txt) {
+  annotate("text", x = -Inf, y =  Inf, label = txt,
+           hjust = -0.1, vjust = 1.5)  # nudge inside the corner
+}
+
+origin_foot_cor <- origin_foot_cor + corner_stat("R = 0.76, p < 2.2e-16") + coord_cartesian(xlim = common_xlim, ylim = common_ylim) 
+trans_foot_cor  <- trans_foot_cor  + corner_stat("R = 0.69, p < 2.2e-16") + coord_cartesian(xlim = common_xlim, ylim = common_ylim)
+origin_gill_cor <- origin_gill_cor + corner_stat("R = 0.70, p < 2.2e-16") + coord_cartesian(xlim = common_xlim, ylim = common_ylim)
+trans_gill_cor  <- trans_gill_cor  + corner_stat("R = 0.72, p < 2.2e-16") + coord_cartesian(xlim = common_xlim, ylim = common_ylim)
+
+combo <- (origin_foot_cor | trans_foot_cor) /
+  (origin_gill_cor | trans_gill_cor)
+
+combo_label<-combo + plot_annotation(tag_levels = "A", tag_suffix = ".") &
+  theme(
+    plot.tag = element_text(face = "bold", size = 16)  # adjust size as you like
+  )
+
+combo_label
+
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+
+## 1) tag each of the four joined data frames
+foot_origin <- foot_origin %>% mutate(tissue = "Foot",       Treat = "Origin")
+foot_trans  <- foot_trans  %>% mutate(tissue = "Foot",       Treat = "Transplant")
+gill_origin <- gill_origin %>% mutate(tissue = "Gills",      Treat = "Origin")
+gill_trans  <- gill_trans  %>% mutate(tissue = "Gills",      Treat = "Transplant")
+
+## 2) combine for faceting
+df_facets <- bind_rows(foot_origin, foot_trans, gill_origin, gill_trans) %>%
+  mutate(
+    tissue = factor(tissue, levels = c("Foot","Gills")),
+    Treat  = factor(Treat,  levels = c("Origin","Transplant"))
+  )
+
+## facet-specific corner labels
+corner_labels <- tibble::tribble(
+  ~tissue, ~Treat,        ~lab,
+  "Foot",  "Origin",      "R = 0.76, p < 2.2e-16",
+  "Foot",  "Transplant",  "R = 0.69, p < 2.2e-16",
+  "Gills", "Origin",      "R = 0.70, p < 2.2e-16",
+  "Gills", "Transplant",  "R = 0.72, p < 2.2e-16"
+)
+
+## 3) build the facetted plot
+common_xlim <- c(-15, 10)
+common_ylim <- c(-15,  8)
+
+p_faceted <-
+  ggplot(df_facets, aes(x = logFC_interact, y = logFC_noInt)) +
+  geom_point(alpha = 0.5, color = "black", size = 1, stroke = 0) +
+  # add 1-1 line
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red")+
+  geom_smooth(method = "lm", se = FALSE, color = "red",
+              size = 1, alpha = 1) +
+  # geom_smooth(
+  #   method = "lm",
+  #   se = TRUE,
+  #   color = NA,          # no line color
+  #   fill = "grey60",
+  #   alpha = 1,
+  #   linetype = 0
+  # )+
+  ## corner text per facet
+  geom_text(
+    data = corner_labels, inherit.aes = FALSE,
+    aes(label = lab, tissue = tissue, Treat = Treat),
+    x = -Inf, y = Inf, hjust = -0.1, vjust = 1.5, size = 3.8
+  ) +
+  labs(x = "Log2FC (with interaction)", y = "Log2FC (no interaction)") +
+  facet_grid(rows = vars(Treat), cols = vars(tissue),
+             switch = "y",    # put row labels (Origin/Transplant) on the right
+             labeller = labeller(
+               tissue = c(Foot = "A. Foot", Gills = "B. Gills")  
+             )) +
+  theme_few() +
+  theme(
+    strip.text.y = element_blank(),          # hide left row strips
+    strip.background = element_blank(),
+    strip.text.x = element_text(face = "bold", size = 16, hjust = 0),
+    panel.spacing = grid::unit(10, "pt"),
+    plot.margin  = margin(8, 8, 8, 8)
+  ) + coord_fixed(ratio = 1, 
+                 xlim = common_xlim, 
+                 ylim = common_ylim)
+
+p_faceted 
+
+y_pos <- c(0.73, 0.27)
+
+library(cowplot)
+library(ggplot2)
+
+p_faceted_new <- ggdraw() +
+  draw_plot(p_faceted, x = 0, y = 0, width = 0.97, height = 1) +  # leave a slim right margin
+  draw_label("Origin",     x = 0.837, y = y_pos[1], angle = -90,
+             fontface = "bold", size = 16, hjust = 0.5) +
+  draw_label("Transplant", x = 0.837, y = y_pos[2], angle = -90,
+             fontface = "bold", size = 16, hjust = 0.5)
+
+
+p_faceted_new
+
+#ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/figureS5_label.png",combo_label, height=8, width=12)
+ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/submission/Manuscript final edits/Figures/Fig_S4.png",p_faceted_new, height=8, width=12, bg="white")
+
