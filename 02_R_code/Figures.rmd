@@ -14,6 +14,7 @@ library(ggrepel)
 library(fields)
 library(lmerTest)
 library(patchwork)
+library(vegan)
 
 ###### Imputation - run on Hummingbird HPC #####
 
