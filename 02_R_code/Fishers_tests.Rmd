@@ -177,8 +177,8 @@ enrichment_results <- foot_origin%>%
   mutate(
     other_DM = sum(foot_origin$DM_count) - DM_count, #dm found in other features
     other_total = sum(foot_origin$Total) - Total, #other available features
-    p_value = fisher.test(matrix(c(DM_count, Total - DM_count, other_DM, other_total - other_DM), nrow = 2))$p.value,
-    odds_ratio = fisher.test(matrix(c(DM_count, Total - DM_count, other_DM, other_total - other_DM), nrow = 2))$estimate
+    p_value = fisher.test(matrix(c(DM_count, Total, other_DM, other_total), nrow = 2))$p.value,
+    odds_ratio = fisher.test(matrix(c(DM_count, Total, other_DM, other_total), nrow = 2))$estimate
   ) %>%
   ungroup() %>% 
   dplyr::select(feature, DM_count, Total, p_value, odds_ratio)
@@ -195,8 +195,8 @@ enrichment_results <- foot_trans%>%
   mutate(
     other_DM = sum(foot_trans$DM_count) - DM_count, #dm found in other features
     other_total = sum(foot_trans$Total) - Total, #other available features
-    p_value = fisher.test(matrix(c(DM_count, Total - DM_count, other_DM, other_total - other_DM), nrow = 2))$p.value,
-    odds_ratio = fisher.test(matrix(c(DM_count, Total - DM_count, other_DM, other_total - other_DM), nrow = 2))$estimate
+    p_value = fisher.test(matrix(c(DM_count, Total, other_DM, other_total), nrow = 2))$p.value,
+    odds_ratio = fisher.test(matrix(c(DM_count, Total, other_DM, other_total), nrow = 2))$estimate
   ) %>%
   ungroup() %>% 
   dplyr::select(feature, DM_count, Total, p_value, odds_ratio)
@@ -214,8 +214,8 @@ enrichment_results <- gill_origin%>%
   mutate(
     other_DM = sum(gill_origin$DM_count) - DM_count, #dm found in other features
     other_total = sum(gill_origin$Total) - Total, #other available features
-    p_value = fisher.test(matrix(c(DM_count, Total - DM_count, other_DM, other_total - other_DM), nrow = 2))$p.value,
-    odds_ratio = fisher.test(matrix(c(DM_count, Total - DM_count, other_DM, other_total - other_DM), nrow = 2))$estimate
+    p_value = fisher.test(matrix(c(DM_count, Total, other_DM, other_total), nrow = 2))$p.value,
+    odds_ratio = fisher.test(matrix(c(DM_count, Total, other_DM, other_total), nrow = 2))$estimate
   ) %>%
   ungroup() %>% 
   dplyr::select(feature, DM_count, Total, p_value, odds_ratio)
@@ -232,8 +232,8 @@ enrichment_results <- gill_trans%>%
   mutate(
     other_DM = sum(gill_trans$DM_count) - DM_count, #dm found in other features
     other_total = sum(gill_trans$Total) - Total, #other available features
-     p_value = fisher.test(matrix(c(DM_count, Total-DM_count, other_DM, other_total-other_DM), nrow = 2))$p.value,
-     odds_ratio = fisher.test(matrix(c(DM_count, Total-DM_count, other_DM, other_total-other_DM), nrow = 2))$estimate
+     p_value = fisher.test(matrix(c(DM_count, Total, other_DM, other_total), nrow = 2))$p.value,
+     odds_ratio = fisher.test(matrix(c(DM_count, Total, other_DM, other_total), nrow = 2))$estimate
   ) %>%
   ungroup() %>% 
   dplyr::select(feature, DM_count, Total, p_value, odds_ratio)
