@@ -22,12 +22,17 @@ library(coin)
 
 ```{r}
 ### Set working directory, include all (top5 for each treatments) gill coverage files ###
-setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/gill")
+
+setwd("/Users/qcai/mytilus_github/Data/gill_coverage_files")
 
 ### Load metadata file that include sample names, load all coverage files into R ###
+
+## unzip Archive folder before moving on, folder contains all .cov files
+ untar("gill_samples.tar.gz", exdir = "archive/")
+ 
 meta_data_gill<-read.delim("gill_metadata.txt", row.names = "sample", stringsAsFactors = FALSE)
 Sample_gill <- row.names(meta_data_gill)
-files_gill <- paste0(Sample_gill,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
+files_gill <- paste0("archive/gill_samples/", Sample_gill,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
 
 ### EdgeR function readBismark2DGE reads all the files and collates the counts for all the sample into one data object ###
 yall <- readBismark2DGE(files_gill, sample.names=Sample_gill)
@@ -260,10 +265,14 @@ gill_volcano
 ```{r}
 ### Find genomics regions that each (DM) CpG falls into ###
 ### Read in intron annotated gff, see Preprocess_00/add_intron.sh for code for intron annotation ###
-gff_intron<-read.gff("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/new_genomic_intron.gff")
+
+unzip("/Users/qcai/mytilus_github/Data/new_genomic_intron.gff.zip",
+      exdir = "/Users/qcai/mytilus_github/Data/")
+
+gff_intron<-read.gff("/Users/qcai/mytilus_github/Data/new_genomic_intron.gff")
 
 ### Convert the gff object to a GRanges object using the gffToGRanges() function of the R package genomation ###
-all_GRange<-gffToGRanges("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/new_genomic_intron.gff", filter = NULL, zero.based = FALSE, ensembl = FALSE) 
+all_GRange<-gffToGRanges("/Users/qcai/mytilus_github/Data/new_genomic_intron.gff", filter = NULL, zero.based = FALSE, ensembl = FALSE) 
 
 ### Divide the annotation GRanges object into different objects filtered for exons and introns ###
 exon_GRange<-all_GRange %>% 
@@ -722,11 +731,15 @@ gene_transplant<-as.data.frame(unique(updated_transplant_gene_unique$gene_id) %>
                              na.omit())
 gene_transplant$gene_id<-gene_transplant$`unique(updated_transplant_gene_unique$gene_id) %>% na.omit()`
 
+unzip(
+  "/Users/qcai/mytilus_github/Data/GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf.zip",
+  exdir = "/Users/qcai/mytilus_github/Data/"
+)
 
 # # load go terms data
 go_terms<-
   read.delim(
-    "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/gene ontology/GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf",
+    "/Users/qcai/mytilus_github/Data/GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf",
     header = FALSE,
     sep = "\t",
     # Specify tab delimiter
@@ -849,7 +862,7 @@ library(goseq)
 ### Load in GO terms, downloaded from NCBI ###
 go_terms<-
   read.delim(
-    "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/gene ontology/GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf",
+    "/Users/qcai/mytilus_github/Data/GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf",
     header = FALSE,
     sep = "\t",
     # Specify tab delimiter
