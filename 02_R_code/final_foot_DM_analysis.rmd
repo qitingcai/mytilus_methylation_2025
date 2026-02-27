@@ -22,12 +22,17 @@ library(coin)
 
 ```{r}
 ### Set working directory, include all (top5 for each treatments) foot coverage files ###
-setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot_final")
+
+setwd("/Users/qcai/mytilus_github/Data/foot_coverage_files")
 
 ### Load metadata file that include sample names, load all coverage files into R ###
+
+## unzip Archive folder before moving on, folder contains all .cov files
+ untar("foot_samples.tar.gz", exdir = "archive")
+
 meta_data_foot<-read.delim("foot_final_metadata.txt", row.names = "sample", stringsAsFactors = FALSE)
 Sample_foot <- row.names(meta_data_foot)
-files_foot <- paste0(Sample_foot,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
+files_foot <- paste0("archive/", Sample_foot,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
 
 ### EdgeR function readBismark2DGE reads all the files and collates the counts for all the sample into one data object ###
 yall <- readBismark2DGE(files_foot, sample.names=Sample_foot)
@@ -254,10 +259,14 @@ foot_volcano
 ```{r}
 ### Find genomics regions that each (DM) CpG falls into ###
 ### Read in intron annotated gff, see Preprocess_00/add_intron.sh for code for intron annotation ###
-gff_intron<-read.gff("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/new_genomic_intron.gff")
+
+unzip("/Users/qcai/mytilus_github/Data/new_genomic_intron.gff.zip",
+      exdir = "/Users/qcai/mytilus_github/Data/")
+
+gff_intron<-read.gff("/Users/qcai/mytilus_github/Data//new_genomic_intron.gff")
 
 ### Convert the gff object to a GRanges object using the gffToGRanges() function of the R package genomation ###
-all_GRange<-gffToGRanges("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/TOP_5/new_genomic_intron.gff", filter = NULL, zero.based = FALSE, ensembl = FALSE) 
+all_GRange<-gffToGRanges("/Users/qcai/mytilus_github/Data/new_genomic_intron.gff", filter = NULL, zero.based = FALSE, ensembl = FALSE) 
 
 ### Divide the annotation GRanges object into different objects filtered for exons and introns ###
 exon_GRange<-all_GRange %>% 
@@ -507,14 +516,13 @@ DM_Trans_foot<- separate(DM_Trans_foot, sample, into = c("Chr", "Locus"), sep = 
 transDM_foot<-DM_Trans_foot%>% 
  mutate(Locus = as.numeric(Locus)+1)
 
-#### Creating a dataframe with all the CpG sites, the ones that are differentially methylated with transplant site were "1" and nonmeth are "0" ###
+#### Creating a dataframe with all the CpG sites, the ones that are differentially methylated with transplant site were "1" and non-methylated sites are "0" ###
 df_trans <- CpGsite_foot %>%
   left_join(transDM_foot, by = c("Chr", "Locus")) %>%
   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
   dplyr::select(Chr,Locus, Meth)
   
-### Adding genic features to the dataframe for each site ###
-
+### Adding genic features to the data frame for each site ###
 intron_subset_foot<-intron_subset_gene_id_df_foot %>% 
   mutate(feature = "intron") #28509 obs
 
@@ -719,10 +727,15 @@ gene_transplant<-as.data.frame(unique(updated_transplant_gene_unique$gene_id) %>
 gene_transplant$gene_id<-gene_transplant$`unique(updated_transplant_gene_unique$gene_id) %>% na.omit()`
 
 
+unzip(
+  "/Users/qcai/mytilus_github/Data/GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf.zip",
+  exdir = "/Users/qcai/mytilus_github/Data/"
+)
+
 # # load go terms data
 go_terms<-
   read.delim(
-    "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/gene ontology/GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf",
+    "/Users/qcai/mytilus_github/Data/GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf",
     header = FALSE,
     sep = "\t",
     # Specify tab delimiter
@@ -805,7 +818,7 @@ length(shared_combined)
 #24
 
 
-#### Making input file for t-test ###
+#### Making input file for comparison ###
 # Ensure all three data frames have the same column names
 colnames(updated_origin_gene_unique) <- colnames(updated_transplant_gene_unique)
 #colnames(updated_transplant_gene_unique) <- colnames(updated_length_gene_unique)
@@ -846,7 +859,7 @@ library(goseq)
 ### Load in GO terms, downloaded from NCBI ###
 go_terms<-
   read.delim(
-    "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/gene ontology/GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf",
+    "/Users/qcai/mytilus_github/Data/GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf",
     header = FALSE,
     sep = "\t",
     # Specify tab delimiter
@@ -1139,7 +1152,7 @@ enriched.GO <- GO.wall$category[p.adjust(GO.wall$over_represented_pvalue, method
  head(enriched.GO)
  #character(0)
  
- write_csv(GO.wall, "goseq_origin.csv")
+ #write_csv(GO.wall, "goseq_origin.csv")
 
 ```
 
