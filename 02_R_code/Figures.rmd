@@ -21,15 +21,15 @@ library(vegan)
 setwd("/hb/groups/kelley_lab/tina/mytilus/Rscripts/data/merged_cov/outlier_detection")
 
 ### Load metadata file that include sample names, load all coverage files into R ###
-meta_data_foot<-read.delim("allsamples.txt", row.names = "sample", stringsAsFactors = FALSE) 
-Sample_foot <- row.names(meta_data_foot)
-files_foot <- paste0(Sample_foot,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
+meta_data <-read.delim("allsamples.txt", row.names = "sample", stringsAsFactors = FALSE) 
+Sample <- row.names(meta_data)
+files <- paste0(Sample,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
 
-meta_data_foot_aqm <- meta_data_foot
-row.names(meta_data_foot_aqm) <- gsub("-", ".", paste0("X", row.names(meta_data_foot_aqm),".Me"))
+meta_data_aqm <- meta_data
+row.names(meta_data_aqm) <- gsub("-", ".", paste0("X", row.names(meta_data_aqm),".Me"))
 
 ### EdgeR function readBismark2DGE reads all the files and collates the counts for all the sample into one data object ###
-yall <- readBismark2DGE(files_foot, sample.names=Sample_foot)
+yall <- readBismark2DGE(files, sample.names=Sample)
 
 ### Check dimension and the count matrix ###
 dim(yall)
@@ -47,31 +47,31 @@ head(Coverage)
 
 #### No filtering for matrix imputation
 n=0
-keep_foot <- rowSums(Coverage >= n) >= 0
-table(keep_foot)
+keep <- rowSums(Coverage >= n) >= 0
+table(keep)
 
 ### DGEList object is subsetted to retain only the filtered loci ###
-y_foot <- yall[keep_foot,, keep.lib.sizes=FALSE]
+y <- yall[keep,, keep.lib.sizes=FALSE]
 
 ### Normalization - set the library sizes for each sample to be the average of the total read counts for the methylated and unmethylated libraries ###
-TotalLibSize <- y_foot$samples$lib.size[Methylation=="Me"] +
-  +                 y_foot$samples$lib.size[Methylation=="Un"]
-y_foot$samples$lib.size <- rep(TotalLibSize, each=2)
-y_foot$samples
+TotalLibSize <- y$samples$lib.size[Methylation=="Me"] +
+  +                 y$samples$lib.size[Methylation=="Un"]
+y$samples$lib.size <- rep(TotalLibSize, each=2)
+y$samples
 
 ### Compute the corresponding methylation summary from the methylated and unmethylated counts ###
-Me_foot <- y_foot$counts[, Methylation=="Me"]
-Un_foot <- y_foot$counts[, Methylation=="Un"]
+Me <- y$counts[, Methylation=="Me"]
+Un<- y$counts[, Methylation=="Un"]
 
 ### Calculating a methylation proportion matrix
-prop_meth_matrix_foot <- Me_foot/(Me_foot+Un_foot)
+prop_meth_matrix <- Me/(Me+Un)
 
 # Convert to a data frame and make column names syntactically valid
-prop_df <- as.data.frame(prop_meth_matrix_foot)
+prop_df <- as.data.frame(prop_meth_matrix)
 colnames(prop_df) <- make.names(colnames(prop_df))
 
 # Also update the sample names in metadata to match
-rownames(meta_data_foot) <- make.names(rownames(meta_data_foot))
+rownames(meta_data) <- make.names(rownames(meta_data))
 
 # Impute missing values using predictive mean matching
 imputed_data <- mice(prop_df, m = 1, method = 'pmm', seed = 123)
@@ -86,6 +86,7 @@ complete_data <- complete(imputed_data, 1)
 ## setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/outlier detection/")
 
 setwd("/Users/qcai/mytilus_github/Data/")
+
 pca_scores<-read.csv("all_imp_scores_pca.csv")
 meta_data<-read.csv("samples_65.csv")
 
