@@ -83,7 +83,9 @@ complete_data <- complete(imputed_data, 1)
 
 
 ################ Making Figure 2 ##########
-setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/outlier detection/")
+## setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/outlier detection/")
+
+setwd("/Users/qcai/mytilus_github/Data/")
 pca_scores<-read.csv("all_imp_scores_pca.csv")
 meta_data<-read.csv("samples_65.csv")
 
@@ -106,7 +108,7 @@ all_length<-meta_data %>%
 
 #looking at PC variance and decide how many spaces to look at
 pc_variance <- read.csv(
-  "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/Methymytilus_Final_Rcode_github/PC_variance.csv",
+  "PC_variance.csv",
   row.names = 1,
   check.names = FALSE
 )
@@ -277,8 +279,8 @@ pc1_length<-ggplot(PC, aes(x = `LENGTH_FINAL..mm.`, y = PC1)) + #plotting shell 
     fill = "Tissue Type", #specify color of points
     tag = "B)"  
   ) + 
-  scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gills" = "#e68d4e"),
-                     labels = c("F" = "Foot", "G" = "Gills"),
+  scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gill" = "#e68d4e"),
+                     labels = c("F" = "Foot", "G" = "Gill"),
                     name   = "Tissue Type",
                     guide  = guide_legend(order = 1))+ #specify color of points
   theme_bw() +
@@ -331,10 +333,7 @@ combined <- (p1_fix | guide_area() | p2_fix) +
 #   plot = combined, width = 20, height = 8, dpi = 300, bg = "white"
 # )
 
-ggsave(
-  "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/submission/fig2_updated.png",
-  plot = combined, width = 12, height = 4.8, dpi = 300, bg = "white"
-)
+#ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/submission/fig2_updated.png", plot = combined, width = 12, height = 4.8, dpi = 300, bg = "white")
 
 ##### Making figure S2 ###
  
@@ -347,7 +346,7 @@ pc2_length<-ggplot(PC, aes(x = `LENGTH_FINAL..mm.`, y = PC2)) + #plotting shell 
      x = "Final shell length (mm)", #label x axis
      fill = "Tissue Type" #specify color of points
    ) + 
-   scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gills" = "#e68d4e"),
+   scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gill" = "#e68d4e"),
                       labels = c("F" = "Foot", "G" = "Gills"),
                      name   = "Tissue Type",
                      guide  = guide_legend(order = 1))  + #specify color of points
@@ -388,7 +387,7 @@ library(ggthemes)
 
 #### Load file with average methylation proportions ###
 
-meth_prop_all<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot_final/percentage_allsample_genomewide.csv")
+meth_prop_all<-read_csv("percentage_allsample_genomewide.csv")
 
 ###### Running a GLM to assess the relationship between mean global methylation % and tissue type, treatment groups ####
 glm<-glmmTMB(`Pre-filtered mean genome wide methylation (%)`/100 ~ Tissue + `Origin site` + `Transplant site` +  (1|Sample),  data=meth_prop_all, family=beta_family(link="logit"))
@@ -430,8 +429,8 @@ p1 <- ggplot(meth_prop_all_pre, aes(x = `Transplant site`, y =`Pre-filtered mean
   theme(strip.text = element_text(size = 18, face = "bold"),  
         strip.background = element_blank(),  # Removes the gray background
         strip.placement = "outside")+
-  scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gills" = "#e68d4e")) +  # Custom fill colors for Tissue
-  scale_color_manual(values = c("Foot" = "#2c8e99", "Gills" = "#d4562a")) +  # Custom point color for Tissue
+  scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gill" = "#e68d4e")) +  # Custom fill colors for Tissue
+  scale_color_manual(values = c("Foot" = "#2c8e99", "Gill" = "#d4562a")) +  # Custom point color for Tissue
    guides(color = "none")+
   labs(y = "Proportion of CpG Methylation",
        fill="Tissue Type") +  # Axis labels and title
@@ -480,8 +479,8 @@ p2 <- ggplot(meth_prop_all_pre, aes(x = `Transplant site`, y =`Post-filtered mea
   theme(strip.text = element_text(size = 18, face = "bold"),  
         strip.background = element_blank(),  # Removes the gray background
         strip.placement = "outside")+
-  scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gills" = "#e68d4e")) +  # Custom fill colors for Tissue
-  scale_color_manual(values = c("Foot" = "#2c8e99", "Gills" = "#d4562a")) +  # Custom point color for Tissue
+  scale_fill_manual(values = c("Foot" = "#3bbdcc", "Gill" = "#e68d4e")) +  # Custom fill colors for Tissue
+  scale_color_manual(values = c("Foot" = "#2c8e99", "Gill" = "#d4562a")) +  # Custom point color for Tissue
   labs(y = "Proportion of CpG Methylation",
        fill="Tissue Type") +  # Axis labels and title
   #scale_y_continuous(limits = c(0.1, 0.3)) + 
@@ -510,10 +509,11 @@ print(p2)
 
 #### Code to make figure 3 in the main text, combining foot and gill volcano plots ####
 ### making combined tissue volcano plots Figure 3
+#foot and gillvolcano comes from code from running final_foot_DM_analysis.rmd and final_gill_DM_analysis.rmd
 
 foot_volcano_labeled <- foot_volcano + plot_annotation(title = "A. Foot",
                                                        theme = theme(plot.title = element_text(face= "bold", size = 20)))
-gill_volcano_labeled <- gill_volcano + plot_annotation(title = "B. Gills",
+gill_volcano_labeled <- gill_volcano + plot_annotation(title = "B. Gill",
                                                        theme = theme(plot.title = element_text(face= "bold", size = 20)))
 
 # 2. Combine them without automatic tags
@@ -607,7 +607,7 @@ dev.off()
 
 
 ### intersection between gill and foot transplant
-
+#merged_all_DM_foot & merged_all_DM_gill come from running final_foot_DM_analysis.rmd and final_gill_DM_analysis.rmd
 intersect(unique(merged_all_DM_foot$combined), unique(merged_all_DM_gill$combined))
 
 library(VennDiagram)
@@ -645,8 +645,8 @@ dev.off()
 #### Pearson's correlation between all logFC in foot and gills ####
 
 #load data
-gill_all_logfc<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/gill_unique_all_CpG.csv")
-foot_all_logfc<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/foot_unique_all_CpG.csv")
+gill_all_logfc<-read_csv("gill_unique_all_CpG.csv")
+foot_all_logfc<-read_csv("foot_unique_all_CpG.csv")
 
 transplant_logfc_gill<-gill_all_logfc %>% 
   filter(Treat=="Transplant")
@@ -724,3 +724,4 @@ cor_test
 
 cor_test <- cor.test(merged$Foot_Transplant, merged$Gill_Transplant, method = "pearson")
 cor_test
+
