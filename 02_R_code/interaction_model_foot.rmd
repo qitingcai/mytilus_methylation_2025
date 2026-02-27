@@ -1,12 +1,17 @@
 ### Aim of this script: foot DM analyses using the interaction model ###
+
 ```{r}
 ### Set working directory, include all (top5 for each treatments) foot coverage files ###
-setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/foot_final")
+
+setwd("/Users/qcai/mytilus_github/Data/foot_coverage_files")
 
 ### Load metadata file that include sample names, load all coverage files into R ###
+## unzip Archive folder before moving on, folder contains all .cov files
+ untar("foot_samples.tar.gz", exdir = "archive/")
+
 meta_data_foot<-read.delim("foot_final_metadata.txt", row.names = "sample", stringsAsFactors = FALSE)
 Sample_foot <- row.names(meta_data_foot)
-files_foot <- paste0(Sample_foot,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
+files_foot <- paste0("archive/foot_samples/", Sample_foot,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
 
 ### EdgeR function readBismark2DGE reads all the files and collates the counts for all the sample into one data object ###
 yall <- readBismark2DGE(files_foot, sample.names=Sample_foot)
@@ -183,7 +188,7 @@ lrt_foot_interaction$table$sample <- rownames(lrt_foot_interaction$table)
 all_CpG_dm <- rbind( lrt_origin_foot$table,
                      lrt_trans_foot$table,
                      lrt_foot_interaction$table)
-write_csv(all_CpG_dm, "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/foot_interaction_all_CpG_dm.csv")
+# write_csv(all_CpG_dm, "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/foot_interaction_all_CpG_dm.csv")
 
 foot_all_CpG_dm<-rbind( lrt_origin_foot$table,
                      lrt_trans_foot$table,
