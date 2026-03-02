@@ -14,7 +14,7 @@ sample	meth	tissue	origin_site	transplant_site	LENGTH_INIT (mm)	OUTPLANT_SITE	LE
 72Y-F_S28	72Y	Foot	protected	exposed	7.62	exposed	8.25	lowprotectedexposedFoot	73841170	176356826
 76G-F_S46	76G	Foot	exposed	exposed	7.53	exposed	9.24	lowexposedexposedFoot	91374140	64030493
 81G-F_S79	81G	Foot	exposed	protected	7.17	protected	7.75	lowexposedprotectedFoot	85408895	127723803
-86G-F_S75	86G	Foot	exposed	protected	7.17	protected	7.75	lowexposedprotectedFoot	76067420	341227233
+86G-F_S75	86G	Foot	exposed	exposed	6.69	exposed	7.37	lowexposedexposedFoot	76067420	341227233
 89Y-F_S31	89Y	Foot	protected	protected	7.94	protected	8.98	lowprotectedprotectedFoot	25894505	228107546
 90W-F_S21	90W	Foot	protected	protected	12.19	protected	12.46	lowprotectedprotectedFoot	49074935	94087043
 91W-F_S30	91W	Foot	protected	exposed	8.28	exposed	9.8	lowprotectedexposedFoot	18753345	465079849

@@ -56,7 +56,7 @@ sample ID,primer index,I7_Index_ID,index,I5_Index_ID,index2,Tissue,Origin site,I
 76G,E10,S751,CAACTCCA,S542,ACGGATTC,Foot,lowexposed,76g,6/14/16,7.53,exposed,1month,7/21/16,9.24,Alive,lowexposedexposedFoot
 76G,H6,S761,GTACCACA,S533,TGTTGTGG,Gill,lowexposed,76g,6/14/16,7.53,exposed,1month,7/21/16,9.24,Alive,lowexposedexposedGill
 81G,H10,S793,CTCGACTT,S573,GGTCAGAT,Foot,lowexposed,81g,6/14/16,7.17,protected,1month,7/22/16,7.75,Alive,lowexposedprotectedFoot
-86G,G7,S724,GCCTTAAC,S547,AGCTCCTA,Foot,lowexposed,81g,6/14/16,7.17,protected,1month,7/22/16,7.75,Alive,lowexposedprotectedFoot
+86G,G7,S724,GCCTTAAC,S547,AGCTCCTA,Foot,lowexposed,86g,6/14/16,6.69,exposed,1month,7/22/16,7.37,Alive,lowexposedexposedFoot
 89Y,C7,S743,CAGTGCTT,S536,ACCTGGAA,Foot,lowprotected,89y,6/19/16,7.94,protected,1month,7/22/16,8.98,Alive,lowprotectedprotectedFoot
 90W,B8,S726,TGCGTAAC,S577,GATAGGCT,Foot,lowprotected,90w,6/15/16,12.19,protected,1month,7/22/16,12.46,Alive,lowprotectedprotectedFoot
 90W,G1,S747,TAGGAGCT,S524,GTTAAGGC,Gill,lowprotected,90w,6/15/16,12.19,protected,1month,7/22/16,12.46,Alive,lowprotectedprotectedGill

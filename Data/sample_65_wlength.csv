@@ -27,7 +27,7 @@ sample,meth,tissue,origin_site,transplant_site,GROUP_CODE.x,LENGTH_INIT..mm.,LEN
 72Y-F_S28,72Y,Foot,lowprotected,exposed,lowprotected_exposed,7.62,8.25
 76G-F_S46,76G,Foot,lowexposed,exposed,lowexposed_exposed,7.53,9.24
 81G-F_S79,81G,Foot,lowexposed,protected,lowexposed_protected,7.17,7.75
-86G-F_S75,86G,Foot,lowexposed,protected,lowexposed_protected,7.17,7.75
+86G-F_S75,86G,Foot,lowexposed,exposed,lowexposed_exposed,6.69,7.37
 89Y-F_S31,89Y,Foot,lowprotected,protected,lowprotected_protected,7.94,8.98
 90W-F_S21,90W,Foot,lowprotected,protected,lowprotected_protected,12.19,12.46
 91W-F_S30,91W,Foot,lowprotected,exposed,lowprotected_exposed,8.28,9.8
