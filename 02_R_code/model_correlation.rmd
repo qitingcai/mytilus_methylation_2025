@@ -2,11 +2,13 @@
 
 ### first find correlation between the log2fc  between two tissues
 
+setwd("/Users/qcai/mytilus_github/Data")
+
 ### load log2FC from models without interaction terms ###
-all_CpG_dm_gill<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/gill_unique_all_CpG.csv") %>% 
+all_CpG_dm_gill<-read_csv("gill_unique_all_CpG.csv") %>% 
   mutate(tissue = "gill",
          model ="no_interaction")
-all_CpG_dm_foot<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/foot_unique_all_CpG.csv") %>% 
+all_CpG_dm_foot<-read_csv("foot_unique_all_CpG.csv") %>% 
   mutate(tissue ="foot",
          model = "no_interaction")
 
@@ -26,10 +28,10 @@ origin_cpg_dm_no_interact_foot<-all_CpG_dm_foot %>%
 
 
 ### load log2FC from models with interaction terms ###
-interaction_all_CpG_dm_foot<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/foot_interaction_all_CpG_dm.csv") %>% 
+interaction_all_CpG_dm_foot<-read_csv("foot_interaction_all_CpG_dm.csv") %>% 
   mutate(tissue ="foot",
          model = "interaction")
-interaction_all_CpG_dm_gill<-read_csv("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/gill_interaction_all_CpG_dm.csv") %>% 
+interaction_all_CpG_dm_gill<-read_csv("gill_interaction_all_CpG_dm.csv") %>% 
   mutate(tissue = "gill",
          model="interaction")
 
@@ -264,5 +266,6 @@ p_faceted_new <- ggdraw() +
 p_faceted_new
 
 #ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/figureS5_label.png",combo_label, height=8, width=12)
-ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/submission/Manuscript final edits/Figures/Fig_S4.png",p_faceted_new, height=8, width=12, bg="white")
+#ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/submission/Manuscript final edits/Figures/Fig_S4.png",p_faceted_new, height=8, width=12, bg="white") 
+
 
