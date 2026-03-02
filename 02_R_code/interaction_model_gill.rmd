@@ -316,6 +316,7 @@ combined
 
 print(combined)
 
+library(grid)
 # Add "Origin" to top-right
 grid.text("Origin", x = unit(0.96, "npc"), y = unit(0.84, "npc"),
           rot = 270, gp = gpar(fontsize = 26, fontface = "bold"))
