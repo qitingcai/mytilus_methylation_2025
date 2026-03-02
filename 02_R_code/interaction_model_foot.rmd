@@ -2,6 +2,8 @@
 
 ```{r}
 ### Set working directory, include all (top5 for each treatments) foot coverage files ###
+library(tidyverse)
+library(ggthemes)
 
 setwd("/Users/qcai/mytilus_github/Data/foot_coverage_files")
 

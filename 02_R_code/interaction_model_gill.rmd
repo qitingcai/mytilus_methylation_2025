@@ -2,12 +2,19 @@
 
 ```{r}
 ### Set working directory, include all (top5 for each treatments) gill coverage files ###
-setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/tissue_specific/gill")
+library(tidyverse)
+library(ggthemes)
+
+setwd("/Users/qcai/mytilus_github/Data/gill_coverage_files")
 
 ### Load metadata file that include sample names, load all coverage files into R ###
+
+## unzip Archive folder before moving on, folder contains all .cov files
+ untar("gill_samples.tar.gz", exdir = "archive/")
+ 
 meta_data_gill<-read.delim("gill_metadata.txt", row.names = "sample", stringsAsFactors = FALSE)
 Sample_gill <- row.names(meta_data_gill)
-files_gill <- paste0(Sample_gill,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
+files_gill <- paste0("archive/gill_samples/",Sample_gill,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
 
 ### EdgeR function readBismark2DGE reads all the files and collates the counts for all the sample into one data object ###
 yall <- readBismark2DGE(files_gill, sample.names=Sample_gill)
@@ -305,11 +312,9 @@ combined<- combined + plot_layout(guides = "collect") &
 combined
 
 # png("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/submission/DM_combined.png", width = 23, height = 15, units = "in", res = 300)
-png("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/M_combined.png", width = 28, height = 27, units = "in", res = 300)
+# png("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/M_combined.png", width = 28, height = 27, units = "in", res = 300)
 
 print(combined)
-
-
 
 # Add "Origin" to top-right
 grid.text("Origin", x = unit(0.96, "npc"), y = unit(0.84, "npc"),
