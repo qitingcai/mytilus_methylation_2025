@@ -7,8 +7,7 @@ Code repository for mussel DNA methylation project
 
 **02_Rcode**: this folder includes scripts used to run differential methylation analyses in R. Analyses were ran separately for foot and gill sample subsets. Also include scripts to make plots and run GO analyses.
 
-
-**Data**: contains all coverage files used for DM analyses, genome annotatation file (with introns annotated), GO terms
+**Data**: contains all coverage files used for DM analyses, genome annotation file (with intron annotated), GO terms
 
 **Outputs**: contains analyses outputs
 
@@ -33,16 +32,15 @@ Code repository for mussel DNA methylation project
 │   │  
 │   ├── 02_R_code
 │   │   ├── Figures.rmd
-│   │   ├── Fishers_tests.rmd
-│   │   ├── GOMWU.R
-│   │   ├── average_lfc.R
+│   │   ├── Fishers_test.R
+│   │   ├── GO_MWU.R
 │   │   ├── final_foot_DM_analysis.rmd
 │   │   ├── final_gill_DM_analysis.rmd
 │   │   ├── interaction_model_foot.rmd
 │   │   ├── interaction_model_gill.rmd
 │   │   └── model_correlation.rmd
 │   ├── Data 
-│   │   ├── foot_coverage_files (n=20 + foot_metadata.txt)
+│   │   ├── foot_coverage_files (n=20 + foot_final_metadata.txt)
 │   │   ├── gill_coverage_files (n=20 + gill_metadata.txt)
 │   │   ├── GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf
 │   │   ├── new_genomic_intron.gff
@@ -50,6 +48,7 @@ Code repository for mussel DNA methylation project
 │   ├── Outputs
 |   │   ├── Mbias_output (mbias_report.html)
 |   │   ├── multiqc_outputs (trimmed + pretrimmed reports)
+|   │   ├── lfg_files
 |   │   ├── imp_scores_pca_merged_40samples.csv
 │   └── └── bismark_output.csv
 │   
