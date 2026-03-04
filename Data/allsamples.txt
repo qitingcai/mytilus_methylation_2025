@@ -25,7 +25,7 @@ sample	meth	tissue	origin_site	transplant_site	GROUP_CODE
 6O-F_S6	6O-F	Foot	lowexposed	exposed	lowexposed_exposed
 6W-F_S50	6W-F	Foot	lowprotected	protected	lowprotected_protected
 72Y-F_S28	72Y-F	Foot	lowprotected	exposed	lowprotected_exposed
-76Y-F_S46	76Y-F	Foot	lowexposed	exposed	lowexposed_exposed
+76G-F_S46	76G-F	Foot	lowexposed	exposed	lowexposed_exposed
 81G-F_S79	81G-F	Foot	lowexposed	protected	lowexposed_protected
 86G-F_S75	86G-F	Foot	lowexposed	exposed	lowexposed_exposed
 89Y-F_S31	89Y-F	Foot	lowprotected	protected	lowprotected_protected
@@ -60,7 +60,7 @@ sample	meth	tissue	origin_site	transplant_site	GROUP_CODE
 67W-G_S86	67W-G	Gill	lowprotected	exposed	lowprotected_exposed
 6W-G_S15	6W-G	Gill	lowprotected	protected	lowprotected_protected
 75Y-G_S9	75Y-G	Gill	lowprotected	protected	lowprotected_protected
-76Y-G_S85	76Y-G	Gill	lowexposed	exposed	lowexposed_exposed
+76G-G_S85	76G-G	Gill	lowexposed	exposed	lowexposed_exposed
 90W-G_S67	90W-G	Gill	lowprotected	protected	lowprotected_protected
 91W-G_S1	91W-G	Gill	lowprotected	exposed	lowprotected_exposed
 9W-G_S48	9W-G	Gill	lowprotected	exposed	lowprotected_exposed
