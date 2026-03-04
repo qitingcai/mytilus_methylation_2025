@@ -864,7 +864,7 @@ table(
 
     ## [1] 0.3106061
 
-Now, let’s calc AIC for a few of these top transplant genes
+## Now, let’s calc AIC for a few of these top transplant genes
 
 ``` r
 library(MASS)
