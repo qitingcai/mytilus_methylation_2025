@@ -951,12 +951,10 @@ ggplot(data = aic_comp,
 ![](sb_growth_reanalysis_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 ``` r
-# Identify 10 most-significant DM CpGs from gill transplant v1
+# Identify 158 most-significant DM CpGs from gill transplant v1
 top158_ids <- rownames(
   lrt_trans_gill$table[order(lrt_trans_gill$table$PValue), ][1:158, ]
 )
-
-
 
 ## Initial growth rate vs. growth
 
