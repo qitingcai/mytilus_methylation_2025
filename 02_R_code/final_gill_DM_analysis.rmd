@@ -49,8 +49,15 @@ Methylation <- gl(2, 1, ncol(yall), labels = c("Me", "Un"))
 Me <- yall$counts[ , Methylation == "Me" ]
 Un <- yall$counts[ , Methylation == "Un" ]
 Coverage <- Me + Un
-# Prefiltered total # of CpGs sequenced: colSums(Coverage > 0, na.rm = TRUE) 
+# Prefiltered total # of CpGs sequenced:
+colSums(Coverage > 0, na.rm = TRUE) 
 head(Coverage)
+
+#prefiltered coverage
+Coverage_prefilter<-Un + Me
+Coverage_prefilter[Coverage_prefilter == 0] <- NA
+mean_coverage_prefilter <- colMeans(Coverage_prefilter, na.rm = TRUE)
+mean_coverage_prefilter
 
 ## Calculating # of unique CpGs
 covered_per_cpg <- rowSums(Coverage > 0, na.rm = TRUE)
@@ -75,17 +82,18 @@ Me_gill <- y_gill$counts[, Methylation=="Me"]
 Un_gill <- y_gill$counts[, Methylation=="Un"]
 
 ### Calculating post-filtered genome-wide coverage 
-# Coverage_postfilter<-Un_gill + Me_gill
-# Coverage_postfilter[Coverage_postfilter == 0] <- NA
-# mean_coverage_postfilter <- colMeans(Coverage_postfilter, na.rm = TRUE)
-# mean_coverage_postfilter 
+Coverage_postfilter<-Un_gill + Me_gill
+Coverage_postfilter[Coverage_postfilter == 0] <- NA
+mean_coverage_postfilter <- colMeans(Coverage_postfilter, na.rm = TRUE)
+mean_coverage_postfilter
 
 ### Calculating a methylation proportion matrix
 prop_meth_matrix_gill <- Me_gill/(Me_gill+Un_gill)
-#Postfiltered total # of CpGs: colSums(!is.na(prop_meth_matrix_gill))
+#Postfiltered total # of CpGs: 
+colSums(!is.na(prop_meth_matrix_gill))   
 
 # ### Calculating average genome wide methylation percentage postfiltering
-# colMeans(prop_meth_matrix_gill,na.rm=TRUE)*100
+colMeans(prop_meth_matrix_gill,na.rm=TRUE)*100
 
 ```
 
@@ -219,10 +227,10 @@ plot_trans <- all_CpG_dm_gill %>% filter(Treat == "Transplant")
   
 # Individual plots
 p1_gill <- ggplot(plot_trans, aes(x = logFC, y = -log10(PValue), color = Sig_Dir)) +
-  geom_point(size = 8, alpha =0.4, stroke=0) +
+  geom_point(size = 2, alpha =0.5, stroke=0) +
   scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
   labs(x = "log2FC", y = "", title = "Transplant",color="black") +
-  theme_few(base_size = 28) +
+  theme_few(base_size = 20) +
   theme(legend.position = "none",
         plot.title = element_blank(),
    axis.text = element_text(color = "black"),
@@ -233,10 +241,10 @@ p1_gill <- ggplot(plot_trans, aes(x = logFC, y = -log10(PValue), color = Sig_Dir
 p1_gill 
 
 p2_gill <- ggplot(plot_origin, aes(x = logFC, y = -log10(PValue), color = Sig_Dir))+
-  geom_point(size = 8, alpha =0.4,stroke=0) +
+  geom_point(size = 2, alpha =0.5,stroke=0) +
   scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
   labs(x = "", y = "", title = "Origin", color="black") +
-  theme_few(base_size = 28) +
+  theme_few(base_size = 20) +
   theme(legend.position = "none",
         plot.title = element_blank(),
    axis.text = element_text(color = "black"),
@@ -574,7 +582,7 @@ df_CpGsite_gill_all <- bind_rows(exon, intron, intergenic, promoter, utr)
 ### Adding methylation information for gill transplant to the dataframe ###
 df_combined_gill_trans <- df_trans%>% 
   full_join(df_CpGsite_gill_all , by =c("Chr","Locus")) %>% 
-  select(-Meth.y) 
+  dplyr::select(-Meth.y) 
 
 ### Remove intergenic regions that overlap with promoter regions ###
   df_combined_gill_trans<-df_combined_gill_trans%>% 
@@ -612,11 +620,11 @@ originDM_gill<-DM_Origin_gill%>%
 df_origin <- CpGsite_gill %>%
   left_join(originDM_gill, by = c("Chr", "Locus")) %>%
   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
-  select(Chr,Locus, Meth)
+  dplyr::select(Chr,Locus, Meth)
 
 df_combined_gill_origin <- df_origin %>% 
   full_join(df_CpGsite_gill_all , by =c("Chr","Locus")) %>% 
-  select(-Meth.y) 
+  dplyr::select(-Meth.y) 
 
 ### Remove intergenic regions that overlap with promoter regions ###
 df_combined_gill_origin <- df_combined_gill_origin%>% 
@@ -660,11 +668,11 @@ mutate(Locus =as.numeric(Locus)+1)
 df_length <- CpGsite_gill %>%
   left_join(lengthDM_gill, by = c("Chr", "Locus")) %>%
   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
-  select(Chr,Locus, Meth)
+  dplyr::select(Chr,Locus, Meth)
 
 df_combined_gill_length <- df_length %>% 
   full_join(df_CpGsite_gill_all , by =c("Chr","Locus")) %>% 
-  select(-Meth.y) 
+  dplyr::select(-Meth.y) 
 
 ### Remove intergenic regions that overlap with promoter regions ###
   df_combined_gill_length <- df_combined_gill_length%>% 

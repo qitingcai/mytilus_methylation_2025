@@ -5,7 +5,7 @@
 
 setwd("/Users/qcai/mytilus_github/Data")
 
-dm_bar_plot<-read_csv("fisher_test_input_final.csv")
+dm_bar_plot<-read_csv("fisher_test_input_final_revised.csv")
 
 dm_bar_plot<- dm_bar_plot %>% 
   mutate(nonDM=Total-DM_count)
@@ -24,13 +24,86 @@ library(dplyr)
 library(dplyr)
 
 #look at dm cpgs compared to background
-gill_trans <- dm_bar_plot %>% filter(tissue == "Gills", Type == "Transplant")
-gill_origin <- dm_bar_plot %>% filter(tissue == "Gills", Type == "Origin")
+gill_trans <- dm_bar_plot %>% filter(tissue == "Gill", Type == "Transplant")
+gill_origin <- dm_bar_plot %>% filter(tissue == "Gill", Type == "Origin")
 # gill_interact <- dm_bar_plot %>% filter(tissue == "Gill", Type == "Interacton")
 
 foot_trans <- dm_bar_plot %>% filter(tissue == "Foot", Type == "Transplant")
 foot_origin <- dm_bar_plot %>% filter(tissue == "Foot", Type == "Origin")
 # foot_interact <- dm_bar_plot %>% filter(tissue == "Foot", Type == "Interacton")
+
+origin_tissues<- dm_bar_plot %>% 
+  filter(Type =="Origin")
+transplant_tissues<- dm_bar_plot %>% 
+  filter(Type =="Transplant")
+
+
+#to look at overall distribution and whether the patterns differ between tissue combined
+table_data_origin <- xtabs(DM_count ~ feature + tissue, data = origin_tissues)
+fisher.test(table_data_origin)
+
+table_data_trans <- xtabs(DM_count ~ feature + tissue, data = transplant_tissues)
+fisher.test(table_data_trans)
+
+
+# Transplant site comparing distribution of each feature vs. all other features in foot and gills
+
+features_trans <- rownames(table_data_trans)
+results <- lapply(features_trans, function(f) {
+  # rows to use for "all other features"
+  others <- setdiff(features_trans, f)
+  
+  feature_vs_rest <- rbind(
+    Feature    = table_data_trans[f, , drop = FALSE],
+    All_others = colSums(table_data_trans[others, , drop = FALSE])
+  )
+  
+  test <- fisher.test(feature_vs_rest)  # works if there are exactly 2 columns
+  
+  data.frame(
+    feature    = f,
+    odds_ratio = if (!is.null(test$estimate)) unname(test$estimate) else NA_real_,
+    p_value    = test$p.value,
+    row.names  = NULL
+  )
+})
+results_df <- bind_rows(results)
+results_df <- results_df %>%
+  mutate(p_adj = p.adjust(p_value, method = "BH"))
+
+results_df
+
+
+
+
+# Origin site comparing distribution of each feature vs. all other features in foot and gills
+
+features_origin <- rownames(table_data_origin)
+results <- lapply(features_origin , function(f) {
+  # rows to use for "all other features"
+  others <- setdiff(features_origin, f)
+  
+  feature_vs_rest <- rbind(
+    Feature    = table_data_origin[f, , drop = FALSE],
+    All_others = colSums(table_data_origin[others, , drop = FALSE])
+  )
+  
+  test <- fisher.test(feature_vs_rest)  # works if there are exactly 2 columns
+  
+  data.frame(
+    feature    = f,
+    odds_ratio = if (!is.null(test$estimate)) unname(test$estimate) else NA_real_,
+    p_value    = test$p.value,
+    row.names  = NULL
+  )
+})
+
+results_df <- bind_rows(results)
+results_df <- results_df %>%
+  mutate(p_adj = p.adjust(p_value, method = "BH"))
+results_df
+
+
 
 # For each feature, compare to rest
 enrichment_results <- foot_origin%>%
@@ -155,9 +228,8 @@ dm_long <- dm_long %>%
 foot<-dm_long %>% 
   filter(tissue=="Foot") 
 
-
 gill<-dm_long %>% 
-  filter(tissue=="Gills") 
+  filter(tissue=="Gill") 
 
 
 p1 <- ggplot(foot, aes(x = Type_Categories, y = Count, fill = feature)) +
@@ -284,15 +356,17 @@ combined<-ggdraw(ggdraw(clip = "off") ) +
 
 combined
 
-#ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/DM_CpG_combined.png", combined, device = "png", width = 12, height = 6, dpi = 300, units = "in")
+# ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/DM_CpG_combined.png", combined, device = "png", width = 12, height = 6, dpi = 300, units = "in")
+ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/Round1_revision/DM_CpG_combined_revised.png", combined, device = "png", width = 12, height = 6, dpi = 300, units = "in")
 
-#### glm between tissues
+
+#### glm between tissues ####
 
 #### see if log fold changes differ between treatment and tissues
 
 library(emmeans)
-merged_all_DM_gill<-read_csv("merged_all_DM_gill.csv") %>% mutate(tissue ="Gill")
-merged_all_DM_foot<-read_csv("merged_all_DM_foot.csv") %>% mutate(tissue ="foot")
+merged_all_DM_gill<-read_csv("/Users/qcai/mytilus_github/Data/merged_all_DM_gill.csv") %>% mutate(tissue ="Gill")
+merged_all_DM_foot<-read_csv("/Users/qcai/mytilus_github/Data/merged_all_DM_foot.csv") %>% mutate(tissue ="foot")
 
 
 merged_unique_foot <- merged_all_DM_foot %>%
@@ -311,8 +385,8 @@ emmeans(fit, pairwise ~ Treat | tissue)   # treatment means within each tissue
 emmeans(fit, pairwise ~  tissue | Treat) 
 
 
-fit <- lm(abs(transplant_logFC) ~ tissue * Treat , data = lfc_tissues)
-summary(fit)
-emmeans(fit, pairwise ~ Treat | tissue)   # treatment means within each tissue
-emmeans(fit, pairwise ~  tissue | Treat) 
+abs_fit <- lm(abs(transplant_logFC) ~ tissue * Treat , data = lfc_tissues)
+summary(abs_fit)
+emmeans(abs_fit, pairwise ~ Treat | tissue)   # treatment means within each tissue
+emmeans(abs_fit, pairwise ~  tissue | Treat) 
 

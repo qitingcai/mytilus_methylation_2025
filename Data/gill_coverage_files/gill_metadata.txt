@@ -17,5 +17,5 @@ sample	meth	tissue	origin_site	transplant_site	LENGTH_INIT (mm)	OUTPLANT_SITE	LE
 67B-G_S8	67B	G	exposed	protected	11.41	protected	11.93	lowexposedprotectedGill	9763065	350793385
 67W-G_S86	67W	G	protected	exposed	13.75	exposed	15.02	lowprotectedexposedGill	50485305	167163191
 75Y-G_S9	75Y	G	protected	protected	8.42	protected	9.12	lowprotectedprotectedGill	62700235	88045684
-76Y-G_S85	76Y	G	exposed	exposed	7.53	exposed	9.24	lowexposedexposedGill	57943405	87981056
+76G-G_S85	76Y	G	exposed	exposed	7.53	exposed	9.24	lowexposedexposedGill	57943405	87981056
 90W-G_S67	90W	G	protected	protected	12.19	protected	12.46	lowprotectedprotectedGill	12104365	58001063

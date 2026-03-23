@@ -49,14 +49,22 @@ Methylation <- gl(2, 1, ncol(yall), labels = c("Me", "Un"))
 Me <- yall$counts[ , Methylation == "Me" ]
 Un <- yall$counts[ , Methylation == "Un" ]
 Coverage <- Me + Un
-# Prefiltered total # of CpGs sequenced: colSums(Coverage > 0, na.rm = TRUE) 
+# Prefiltered total # of CpGs sequenced: 
+colSums(Coverage > 0, na.rm = TRUE) 
 head(Coverage)
 
 ## Calculating # of unique CpGs 
-# covered_per_cpg <- rowSums(Coverage > 0, na.rm = TRUE)
-# sum(covered_per_cpg > 0) # 1946085
+covered_per_cpg <- rowSums(Coverage > 0, na.rm = TRUE)
+sum(covered_per_cpg > 0) #1972678
+
+#prefiltered coverage
+Coverage_prefilter<-Un + Me
+Coverage_prefilter[Coverage_prefilter == 0] <- NA
+mean_coverage_prefilter <- colMeans(Coverage_prefilter, na.rm = TRUE)
+mean_coverage_prefilter
 
 ### Filtering to only include samples with a coverage of at least 3, for 66% of samples, total of 14 samples ###
+
 n=3
 keep_foot <- rowSums(Coverage >= n) >= 14
 table(keep_foot)
@@ -75,17 +83,18 @@ Me_foot <- y_foot$counts[, Methylation=="Me"]
 Un_foot <- y_foot$counts[, Methylation=="Un"]
 
 ### Calculating postfiltered genome-wide coverage 
-# Coverage_postfilter<-Un_foot + Me_foot
-# Coverage_postfilter[Coverage_postfilter == 0] <- NA
-# mean_coverage_postfilter <- colMeans(Coverage_postfilter, na.rm = TRUE)
-# mean_coverage_postfilter 
+Coverage_postfilter<-Un_foot + Me_foot
+Coverage_postfilter[Coverage_postfilter == 0] <- NA
+mean_coverage_postfilter <- colMeans(Coverage_postfilter, na.rm = TRUE)
+mean_coverage_postfilter
 
 ### Calculating a methylation proportion matrix
 prop_meth_matrix_foot <- Me_foot/(Me_foot+Un_foot)
-#Postfiltered total # of CpGs: colSums(!is.na(prop_meth_matrix_foot))
+#Postfiltered total # of CpGs: 
+colSums(!is.na(prop_meth_matrix_foot))
 
 # ### Calculating average genome wide methylation percentage postfiltering
-# colMeans(prop_meth_matrix_foot,na.rm=TRUE)*100
+colMeans(prop_meth_matrix_foot,na.rm=TRUE)*100
 
 ```
 
@@ -176,7 +185,7 @@ wilcox.test(lrt_trans_foot$table$logFC, mu = 0, alternative = "greater")
 wilcox.test(lrt_origin_foot$table$logFC, mu = 0, alternative = "less") 
 wilcox.test(lrt_origin_foot$table$logFC, mu = 0, alternative = "greater")  
 
-wilcox_effsize(data = lrt_trans_foot$table,
+wilcox_effsize<-wilcox_effsize(data = lrt_trans_foot$table,
   formula = logFC ~ 1, mu = 0)
 
 ### Merge origin site and transplant site coefficients ###
@@ -194,6 +203,8 @@ all_CpG_dm_length <- rbind( lrt_origin_foot$table,
 #   filter(Treat=="Transplant")
 
 # write_csv(all_CpG_dm_foot ,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/foot_unique_all_CpG.csv")
+
+# write_csv(all_CpG_dm_foot ,"/Users/qcai/mytilus_github/Data/foot_unique_all_CpG.csv")
 
 
 ### Saving DM sites for transplant site effect and origin site effect as new objects ###
@@ -214,10 +225,10 @@ plot_trans <- all_CpG_dm_foot %>% filter(Treat == "Transplant")
   
 # Individual plots
 p1_foot <- ggplot(plot_trans, aes(x = logFC, y = -log10(PValue), color = Sig_Dir)) +
-  geom_point(size = 8, alpha =0.4, stroke=0) +
+  geom_point(size = 2, alpha =0.5, stroke=0) +
   scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
   labs(x = "log2FC", y = "-log10 p-value", title = "Transplant",color="black") +
-  theme_few(base_size = 28) +
+  theme_few(base_size = 20) +
   theme(legend.position = "none",
         plot.title = element_blank(),
    axis.text = element_text(color = "black"),
@@ -228,10 +239,10 @@ p1_foot <- ggplot(plot_trans, aes(x = logFC, y = -log10(PValue), color = Sig_Dir
 p1_foot 
 
 p2_foot <- ggplot(plot_origin, aes(x = logFC, y = -log10(PValue), color = Sig_Dir))+
-  geom_point(size = 8, alpha =0.4,stroke=0) +
+  geom_point(size = 2, alpha =0.5,stroke=0) +
   scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
   labs(x = "", y = "-log10 p-value", title = "Origin", color="black") +
-  theme_few(base_size = 28) +
+  theme_few(base_size = 20) +
   theme(legend.position = "none",
         plot.title = element_blank(),
    axis.text = element_text(color = "black"),
@@ -524,19 +535,19 @@ df_trans <- CpGsite_foot %>%
   
 ### Adding genic features to the data frame for each site ###
 intron_subset_foot<-intron_subset_gene_id_df_foot %>% 
-  mutate(feature = "intron") #28509 obs
+  mutate(feature = "intron") #29203 obs
 
 exon_subset_foot<-exon_subset_gene_id_df_foot %>% 
-  mutate(feature = "exon") #5694 obs
+  mutate(feature = "exon") #5819 obs
 
 intergenic_subset_foot<-interg_subset_df_foot %>% 
-  mutate(feature = "interg") #44008 obs (this number includes overlap with promoter regions)
+  mutate(feature = "interg") #45096 obs (this number includes overlap with promoter regions)
 
 promoter_subset_foot<-promoter_subset_gene_id_df_foot %>% 
-  mutate(feature = "promoter") #1976 obs
+  mutate(feature = "promoter") #2029 obs
 
 utr_subset_foot<-utr_subset_gene_id_df_foot %>% 
-  mutate(feature = "UTR") #862 obs
+  mutate(feature = "UTR") #863 obs
 
 ### Finding CpG subsets overlapped with exons ###  
 exon<- CpGsite_foot %>%
@@ -575,7 +586,7 @@ df_combined_foot_trans <- df_trans%>%
   df_combined_foot_trans<-df_combined_foot_trans%>% 
     group_by(Chr, Locus) %>%
  filter(!(any(feature == "promoter") & feature == "interg")) %>%
-  ungroup() #intergenic count: 42470 
+  ungroup() #intergenic count: 43525
 
 ### Running GLMM to test the effect of genomic feature on DM pattern (0 or 1) ###
 ### If a CpG falls into intergenic region, it does not have a gene ID and would be "intergenic" 
@@ -588,6 +599,9 @@ df_combined_foot_trans <- df_trans%>%
 ### Filter for DM CpGs
    df_combined_foot_trans_df_DM <-df_combined_foot_trans_df %>% 
      filter(Meth.x==1)
+   
+### no DM on promoter regions, thus excluding all the promoter entries for the GLM tests, 79410 left
+df_combined_foot_trans_df <- df_combined_foot_trans_df %>% filter(feature != "promoter")
 
 glm <- glm(Meth.x ~ feature , data =  df_combined_foot_trans_df, family = binomial(link = "logit"))
 summary(glm)
@@ -617,7 +631,7 @@ df_combined_foot_origin <- df_origin %>%
 df_combined_foot_origin <- df_combined_foot_origin%>% 
     group_by(Chr, Locus) %>%
  filter(!(any(feature == "promoter") & feature == "interg")) %>%
-  ungroup()
+  ungroup() 
 
 ### Running GLMM to test the effect of feature on DM pattern (0 or 1) ###
 
@@ -630,10 +644,7 @@ df_combined_foot_origin_df$feature <-
 
 ### Filter for DM CpGs
 df_combined_foot_origin_df_DM <-df_combined_foot_origin_df %>% 
-     filter(Meth.x==1) # no promoters contain DM CpG
-
-### no DM on promoter regions, thus excluding all the promoter entries for the GLM tests
-df_combined_foot_origin_df <- df_combined_foot_origin_df %>% filter(feature != "promoter")
+     filter(Meth.x==1) 
 
 glm <-glm(Meth.x ~ feature ,
               data =  df_combined_foot_origin_df, 
@@ -810,13 +821,20 @@ updated_length_gene_unique <- updated_length_gene_unique %>%
 #write.csv(updated_length_gene_unique, "DMgene_goterm_length_foot.csv", row.names = FALSE)
 
 #look at how many DM CpGs were shared between transplant and origin site effect
-origin_combined <- unique(updated_origin_gene_unique$combined)
-transplant_combined <- unique(updated_transplant_gene_unique$combined)
+origin_combined <- unique(updated_origin_gene_unique$combined) #96
+transplant_combined <- unique(updated_transplant_gene_unique$combined) #83
 shared_combined <- intersect(origin_combined, transplant_combined)
 # Count how many are shared
 length(shared_combined)
-#24
+#28
 
+# Extracting the same entries:
+# origin_shared_rows <- updated_origin_gene_unique[
+#   updated_origin_gene_unique$combined %in% shared_combined, ]
+# transplant_shared_rows <- updated_transplant_gene_unique[
+#   updated_transplant_gene_unique$combined %in% shared_combined, ]
+# shared_rows_all <- rbind(origin_shared_rows, transplant_shared_rows) %>% 
+#   filter(Treat=="Origin")
 
 #### Making input file for comparison ###
 # Ensure all three data frames have the same column names
@@ -830,7 +848,8 @@ merged_all_DM_foot <- rbind(
 trans_origin_compar_foot<-lmer(abs(transplant_logFC)~Treat+(1|gene_id),merged_all_DM_foot)
 summary(trans_origin_compar_foot)
 
-#write_csv(merged_all_DM_foot,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/merged_all_DM_foot.csv")
+
+# write_csv(merged_all_DM_foot,"/Users/qcai/mytilus_github/Data/merged_all_DM_foot.csv")
 # 
 # average_lfc_DM_trans_foot<-updated_transplant_gene_unique %>%
 #   group_by(gene_id) %>%
@@ -883,18 +902,18 @@ originDM_foot<- DM_Origin_foot %>%
   mutate(Locus=as.numeric(Locus)+1)
 
 ### Creating a dataframe with genomic feature & DM methylation classification, keep only entres with genes ###
+# df_trans_all_fix <- df_CpGsite_foot_all %>%
+#   left_join(transDM_foot, by = c("Chr", "Locus")) %>%
+#   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
+#   dplyr::select(Chr,Locus, Meth,gene_id,feature) %>%  # Removing intergenic features that do not correspond with a gene
+#   na.omit()
+
+## code for origin site effect ###
 df_trans_all_fix <- df_CpGsite_foot_all %>%
   left_join(originDM_foot, by = c("Chr", "Locus")) %>%
   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
-  dplyr::select(Chr,Locus, Meth,gene_id,feature) %>%  # Removing intergenic features that do not correspond with a gene
+  dplyr::select(Chr,Locus, Meth,gene_id,feature) %>%
   na.omit()
-
-### code for origin site effect ###
-# df_trans_all_fix <- df_CpGsite_foot_all %>%
-#   left_join(originDM_foot, by = c("Chr", "Locus")) %>%
-#   mutate(Meth = if_else(!is.na(logFC), 1, Meth)) %>%
-#   dplyr::select(Chr,Locus, Meth,gene_id,feature) %>%  
-#   na.omit()
 
 ### Extracting all DM CpGs ###
   DM_direc <- df_trans_all_fix %>%
@@ -1151,6 +1170,10 @@ enriched_go_ids <- overrep_go$category
 enriched.GO <- GO.wall$category[p.adjust(GO.wall$over_represented_pvalue, method = "BH" ) < 0.05]
  head(enriched.GO)
  #character(0)
+ # write_csv(GO.wall, "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/Round1_revision/goseq_trans.csv")
+ 
+ 
+  write_csv(GO.wall, "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/Round1_revision/goseq_origin.csv")
  
  #write_csv(GO.wall, "goseq_origin.csv")
 
