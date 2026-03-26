@@ -41,16 +41,17 @@ transplant_tissues<- dm_bar_plot %>%
 #to look at overall distribution and whether the patterns differ between tissue combined
 table_data_origin <- xtabs(DM_count ~ feature + tissue, data = origin_tissues)
 fisher.test(table_data_origin)
+#p-value = 3.048e-05
 
 table_data_trans <- xtabs(DM_count ~ feature + tissue, data = transplant_tissues)
 fisher.test(table_data_trans)
-
+#p-value = 0.00426
 
 # Transplant site comparing distribution of each feature vs. all other features in foot and gills
 
 features_trans <- rownames(table_data_trans)
 results <- lapply(features_trans, function(f) {
-  # rows to use for "all other features"
+
   others <- setdiff(features_trans, f)
   
   feature_vs_rest <- rbind(
@@ -142,8 +143,6 @@ enrichment_results <- enrichment_results %>%
   mutate(p_adj = p.adjust(p_value, method = "BH"))
 
 enrichment_results
-
-
 
 
 # For each feature, compare to rest
@@ -357,7 +356,7 @@ combined<-ggdraw(ggdraw(clip = "off") ) +
 combined
 
 # ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/DM_CpG_combined.png", combined, device = "png", width = 12, height = 6, dpi = 300, units = "in")
-ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/Round1_revision/DM_CpG_combined_revised.png", combined, device = "png", width = 12, height = 6, dpi = 300, units = "in")
+#ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/Round1_revision/DM_CpG_combined_revised.png", combined, device = "png", width = 12, height = 6, dpi = 300, units = "in")
 
 
 #### glm between tissues ####

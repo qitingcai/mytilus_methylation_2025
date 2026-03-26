@@ -693,7 +693,7 @@ df_combined_foot_length_DM <- df_combined_foot_length_df %>%
 
 ```{r}
 
-### Generating table S4 results, DMs associated with features, lfc and GO term information ###
+### Generating table S5 results, DMs associated with features, lfc and GO term information ###
 
 origin_gene_unique <- df_combined_foot_origin %>% filter(Meth.x==1)
 transplant_gene_unique <- df_combined_foot_trans %>% filter(Meth.x==1)
@@ -1299,15 +1299,34 @@ average_lfg_foot_transplant_filtered<-lfg_gene_foot_transplant_filtered %>%
 
 # write_csv(average_lfg_foot_transplant_filtered,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/MethylMussel_GO/GO_MWU/average_lfg_foot_transplant_filtered_no_interaction.csv")
 # 
+
+write_csv(average_lfg_foot_transplant_filtered,"/Users/qcai/mytilus_github/Outputs/lfg_files/average_lfg_foot_transplant_filtered_no_interaction.csv")
+
 # write_csv(average_lfg_foot_origin_filtered,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/MethylMussel_GO/GO_MWU/average_lfg_foot_origin_filtered_no_interaction.csv")
 
+
+write_csv(average_lfg_foot_origin_filtered,"/Users/qcai/mytilus_github/Outputs/lfg_files/average_lfg_foot_origin_filtered_no_interaction.csv")
 
 # ## saving the matching GO term and gene file ###
 # write_csv(category_list_prep_parent,"/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/MethylMussel_GO/GO_MWU/go_gene_matching.csv")
 
+
+
 go_foot_df <-category_list_prep_parent %>%
   group_by(gene_id) %>%
   summarise(GO = paste(unique(Parent_Term), collapse = ";"), .groups = "drop")
+
+
+write.table(
+  go_foot_df,
+  "/Users/qcai/mytilus_github/Outputs/lfg_files/GO_foot_df.tab",
+  row.names = FALSE,
+  sep = "\t",
+  quote = FALSE,
+  col.names = FALSE
+)
+
+
 
 # write.table(
 #   go_foot_df,
@@ -1318,6 +1337,5 @@ go_foot_df <-category_list_prep_parent %>%
 #   col.names = FALSE
 # )
 # 
-
 
 ```

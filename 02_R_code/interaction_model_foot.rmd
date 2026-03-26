@@ -192,6 +192,9 @@ all_CpG_dm <- rbind( lrt_origin_foot$table,
                      lrt_foot_interaction$table)
 # write_csv(all_CpG_dm, "/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/foot_interaction_all_CpG_dm.csv")
 
+write_csv(all_CpG_dm, "/Users/qcai/mytilus_github/Data/foot_interaction_all_CpG_dm.csv")
+
+
 foot_all_CpG_dm<-rbind( lrt_origin_foot$table,
                      lrt_trans_foot$table,
                      lrt_foot_interaction$table)
@@ -225,6 +228,7 @@ foot_dff_meth
 
 
 ```{r}
+
 library(patchwork)
 # Filter datasets
 plot_origin <- all_CpG_dm %>% filter(Treat == "Origin")
@@ -237,7 +241,7 @@ p1_foot <- ggplot(plot_trans, aes(x = logFC, y = -log10(PValue), color = Sig_Dir
   geom_point(size = 5, alpha =0.4, stroke=0) +
   scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
   labs(x = "", y = "-log10 p-value", title = "Transplant",color="black", size =28) +
-  theme_few(base_size = 28) +
+  theme_few(base_size = 30) +
   theme(legend.position = "none",
         plot.title = element_blank(),
    axis.text = element_text(color = "black"),
@@ -251,7 +255,7 @@ p2_foot <- ggplot(plot_origin, aes(x = logFC, y = -log10(PValue), color = Sig_Di
   geom_point(size = 5, alpha =0.4,stroke=0) +
   scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
   labs(x = "", y = "-log10 p-value", title = "Origin", color="black", size =28) +
-  theme_few(base_size = 28) +
+  theme_few(base_size = 30) +
   theme(legend.position = "none",
         plot.title = element_blank(),
    axis.text = element_text(color = "black"),
@@ -263,7 +267,7 @@ p3_foot <- ggplot(plot_interaction, aes(x = logFC, y = -log10(PValue), color = S
   geom_point(size = 5, alpha =0.4,stroke=0) +
   scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
   labs(x = "log2FC", y = "-log10 p-value", title = "Interaction", color="black", size =28) +
-  theme_few(base_size = 28) +
+  theme_few(base_size = 30) +
   theme(legend.position = "none",
         plot.title = element_blank(),
    axis.text = element_text(color = "black"),

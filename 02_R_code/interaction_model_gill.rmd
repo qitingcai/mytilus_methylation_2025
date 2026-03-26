@@ -235,7 +235,7 @@ p1_gill <- ggplot(plot_trans, aes(x = logFC, y = -log10(PValue), color = Sig_Dir
   geom_point(size = 5, alpha =0.4, stroke=0) +
   scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
   labs(x = "", y = "", title = "Transplant",color="black", size =28) +
-  theme_few(base_size = 28) +
+  theme_few(base_size = 30) +
   theme(legend.position = "none",
         plot.title = element_blank(),
    axis.text = element_text(color = "black"),
@@ -249,7 +249,7 @@ p2_gill <- ggplot(plot_origin, aes(x = logFC, y = -log10(PValue), color = Sig_Di
   geom_point(size = 5, alpha =0.4,stroke=0) +
   scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
   labs(x = "", y = "", title = "Origin", color="black", size =28) +
-  theme_few(base_size = 28) +
+  theme_few(base_size = 30) +
   theme(legend.position = "none",
         plot.title = element_blank(),
    axis.text = element_text(color = "black"),
@@ -261,7 +261,7 @@ p3_gill <- ggplot(plot_interaction, aes(x = logFC, y = -log10(PValue), color = S
   geom_point(size = 5, alpha =0.4,stroke=0) +
   scale_color_manual(values = c("#2a2e2e", "#2a2e2e", "blue", "red")) +
   labs(x = "log2FC", y = "", title = "Interaction", color="black", size =28) +
-  theme_few(base_size = 28) +
+  theme_few(base_size = 30) +
   theme(legend.position = "none",
         plot.title = element_blank(),
    axis.text = element_text(color = "black"),
@@ -314,20 +314,23 @@ combined
 # png("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/submission/DM_combined.png", width = 23, height = 15, units = "in", res = 300)
 # png("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/M_combined.png", width = 28, height = 27, units = "in", res = 300)
 
+
+png("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/Round1_revision/figures4.png", width = 28, height = 27, units = "in", res = 300)
+
 print(combined)
 
 library(grid)
 # Add "Origin" to top-right
 grid.text("Origin", x = unit(0.96, "npc"), y = unit(0.84, "npc"),
-          rot = 270, gp = gpar(fontsize = 26, fontface = "bold"))
+          rot = 270, gp = gpar(fontsize = 30, fontface = "bold"))
 
 # Add "Transplant" to middle -right
 grid.text("Transplant", x = unit(0.96, "npc"), y = unit(0.51, "npc"),
-          rot = 270, gp = gpar(fontsize = 26, fontface = "bold"))
+          rot = 270, gp = gpar(fontsize = 30, fontface = "bold"))
 
 # Add "Interaction" to bottom-right
 grid.text("Interaction", x = unit(0.96, "npc"), y = unit(0.19, "npc"),
-          rot = 270, gp = gpar(fontsize = 26, fontface = "bold"))
+          rot = 270, gp = gpar(fontsize = 30, fontface = "bold"))
 
 
 # 4. Close the device to save the file
