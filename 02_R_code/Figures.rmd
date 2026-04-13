@@ -82,7 +82,7 @@ complete_data <- complete(imputed_data, 1)
 ###################################################
 
 
-################ Making Figure 2 ##########
+################ Making Figure 1 ##########
 ## setwd("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/cg_coverage_files/outlier detection/")
 
 setwd("/Users/qcai/mytilus_github/Data/")
@@ -175,115 +175,6 @@ line_data <- pca_data %>%
   group_by(meth) %>%
   filter(dplyr::n() > 1) %>%
   arrange(meth, PC1, PC2)
-
-pca_imputated_merged_pc13 <- ggplot(pca_data, aes(
-  x = PC1,
-  y = PC3,
-  shape = GROUP_CODE,
-  fill = tissue
-)) +
-  scale_fill_manual(
-    values = c("Foot" = "#3bbdcc", "Gill" = "#e68d4e"),
-    name ="Tissue Type") +
-  guides(fill = guide_legend(order = 1, override.aes = list(shape = 21)))+ 
-  geom_point(size = 5, alpha = 0.8, stroke = 0.2, color = "black") +
-  geom_line(aes(group = meth), color = "black", linetype = 1) +
-  scale_shape_manual(
-    values = c(
-      "lowprotected_protected" = 21,
-      "lowprotected_exposed" = 22,
-      "lowexposed_exposed" = 24,
-      "lowexposed_protected" = 23
-    ),
-    labels = c(
-      "lowprotected_protected" = "Protected_Protected",
-      "lowprotected_exposed" = "Protected_Exposed",
-      "lowexposed_exposed" = "Exposed_Exposed",
-      "lowexposed_protected" = "Exposed_Protected"
-    ), 
-    name  = "Treatment",
-    guide = guide_legend(order=2) 
-  ) +
-  labs(
-    x = "PC1 (3.75%)",
-    y = "PC3 ",
-    fill = "Tissue Type",
-    shape = "Treatment",
-    tag = "A)"  
-  ) +
-  theme_bw() +
-  theme(
-    panel.grid = element_blank(),
-    strip.text = element_text(size = 13),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 18),
-    axis.title = element_text(size = 20),
-    legend.text = element_text(size = 13),
-    legend.title = element_text(size = 15)
-  )  
-
-pca_imputated_merged_pc13
-
-### Create lines connecting points with the same letter ###
-line_data <- pca_data %>%
-  group_by(meth) %>%
-  filter(dplyr::n() > 1) %>%
-  arrange(meth, PC1, PC2)
-
-pca_imputated_merged_pc23 <- ggplot(pca_data, aes(
-  x = PC2,
-  y = PC3,
-  shape = GROUP_CODE,
-  fill = tissue
-)) +
-  scale_fill_manual(
-    values = c("Foot" = "#3bbdcc", "Gill" = "#e68d4e"),
-    name ="Tissue Type") +
-  guides(fill = guide_legend(order = 1, override.aes = list(shape = 21)))+ 
-  geom_point(size = 5, alpha = 0.8, stroke = 0.2, color = "black") +
-  geom_line(aes(group = meth), color = "black", linetype = 1) +
-  scale_shape_manual(
-    values = c(
-      "lowprotected_protected" = 21,
-      "lowprotected_exposed" = 22,
-      "lowexposed_exposed" = 24,
-      "lowexposed_protected" = 23
-    ),
-    labels = c(
-      "lowprotected_protected" = "Protected_Protected",
-      "lowprotected_exposed" = "Protected_Exposed",
-      "lowexposed_exposed" = "Exposed_Exposed",
-      "lowexposed_protected" = "Exposed_Protected"
-    ), 
-    name  = "Treatment",
-    guide = guide_legend(order=2) 
-  ) +
-  labs(
-    x = "PC2 (3.03%)",
-    y = "PC3 ",
-    fill = "Tissue Type",
-    shape = "Treatment",
-    tag = "A)"  
-  ) +
-  theme_bw() +
-  theme(
-    panel.grid = element_blank(),
-    strip.text = element_text(size = 13),
-    axis.text.x = element_text(size = 18),
-    axis.text.y = element_text(size = 18),
-    axis.title = element_text(size = 20),
-    legend.text = element_text(size = 13),
-    legend.title = element_text(size = 15)
-  )  
-
-pca_imputated_merged_pc23
-
-
-
-
-
-
-
 
 
 pca_imputated_merged <- ggplot(pca_data, aes(
@@ -508,7 +399,7 @@ combined <- (p1_fix | guide_area() | p2_fix) +
 
 #ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/submission/fig2_updated.png", plot = combined, width = 12, height = 4.8, dpi = 300, bg = "white")
 
-##### Making figure S2 ###
+##### Making figure S1 ###
  
 <!-- pc2_length<-ggplot(pca_data, aes(x = `LENGTH_FINAL..mm.`, y = PC2)) + #plotting shell length and PC1 loadings -->
 <!--    geom_point(aes(fill= tissue), alpha = 0.8, stroke = 0.2, col="black", shape =21, size=6) +  # Keep points colored by tissue -->
@@ -616,7 +507,7 @@ pc2_length <- ggplot(pca_data, aes(x = `LENGTH_FINAL..mm.`, y = PC2)) +
  
 
 # ggsave("figS2.png", plot = pc2_length, width = 10, height = 8, dpi = 300)
-ggsave("figS2_updated.png", plot = pc2_length, width = 12, height = 8, dpi = 300)
+ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/Round1_revision/figS2_updated.png", plot = pc2_length, width = 12, height = 8, dpi = 300)
 
 
 ### Code to make Figure 2 in the main text ###
@@ -638,7 +529,6 @@ summary(glm_post)
 #get the results stats in response scale:
 #baseline value: plogis(-2.405639) --> 0.0827437
 #with the effect: plogis(-2.405639  +  0.029291) --> 0.08499415
-
 
 # meth_prop_all_pre<-meth_prop_all  
 # meth_prop_all_pre<-meth_prop_all %>% 
@@ -978,8 +868,6 @@ origin_cor<-ggplot(merged, aes(x = Gill_Origin, y = Foot_Origin)) +
 
 
 origin_cor
-# ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/origin_cor_foot_gill.png",origin_cor, height =8, width=12)
-
 
 library(dplyr)
 library(tidyr)
@@ -1006,7 +894,7 @@ combined_plot <- ggplot(merged_long,
               col = "red", size = 1) +
   facet_wrap(~Condition, nrow = 1) +   # puts Transplant & Origin on top
   theme_few(base_size = 15) +
-  labs(x = "Gills log2FC",
+  labs(x = "Gill log2FC",
        y = "Foot log2FC") +
   stat_cor(method = "pearson",
            label.x.npc = "left",
@@ -1014,6 +902,8 @@ combined_plot <- ggplot(merged_long,
            size = 4)
 
 combined_plot
+
+ggsave("/Users/qcai/Documents/UCSC/Kelley_Lab/mytilus/manuscript/Round1_revision/figS5_cor_foot_gill.png",combined_plot, height =6, width=12)
 
 
 
