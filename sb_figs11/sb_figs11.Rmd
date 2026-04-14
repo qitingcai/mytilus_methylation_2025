@@ -1,0 +1,166 @@
+---
+title: "figs11"
+author: "Sam Bogan"
+date: "2026-04-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = '~/Documents/GitHub/mytilus_methylation_2025/')
+
+library(tidyverse)
+
+```
+
+```{r}
+
+# Define CpGs of interest according to Wes (NW_026262582.1:44952191 added by )
+cpg_list <- data.frame(
+  scaf = c(
+  "NW_026262581.1", "NW_026262581.1", "NW_026262581.1", "NW_026262581.1", "NW_026262581.1", "NW_026262581.1", "NW_026262581.1",
+  "NW_026262723.1",
+  "NW_026262593.1",
+  "NW_026262668.1",
+  "NW_026262668.1", "NW_026262668.1", "NW_026262668.1", "NW_026262668.1",
+  "NW_026262701.1", "NW_026262701.1", "NW_026262701.1", "NW_026262701.1", "NW_026262701.1"),
+  pos = c(8255829, 8255833, 8255837, 8255853, 8255869, 8255895, 8255904,
+          8800433, 
+          4893518,
+          1402128,
+          64590343, 64590353, 64590376, 64590381,
+          40335203, 40335205, 40335302, 40335329, 40335342),
+  gene = c("LOC127698951", "LOC127698951", "LOC127698951", "LOC127698951", "LOC127698951", "LOC127698951", "LOC127698951",
+           "LOC127709993", 
+           "LOC127719413",
+           "LOC127729054",
+           "LOC127730255", "LOC127730255", "LOC127730255", "LOC127730255",
+           "LOC127702076", "LOC127702076", "LOC127702076", "LOC127702076", "LOC127702076"),
+  protein = c("SSUH2", "SSUH2", "SSUH2", "SSUH2", "SSUH2", "SSUH2", "SSUH2",
+              "DZIP3",
+              "EEF1AKMT4",
+              "ABHD14B", 
+              "CSAD", "CSAD", "CSAD", "CSAD",
+              "TRPM2", "TRPM2", "TRPM2", "TRPM2", "TRPM2"))
+
+# Create CpG id
+cpg_list$cpg <- paste(cpg_list$scaf, cpg_list$pos-1, sep = "-")
+
+```
+
+Create prop meth df and filter for CpGs of interest
+
+```{r}
+
+### Load metadata file that include sample names, load all coverage files into R ###
+meta_data <-rbind(meta_data_foot, meta_data_gill)
+
+fsamp <- row.names(meta_data_foot)
+gsamp <- row.names(meta_data_gill)
+
+Sample <- row.names(meta_data)
+
+ffiles <- paste0("Data/foot_coverage_files/foot_samples/", fsamp,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
+gfiles <- paste0("Data/gill_coverage_files/gill_samples/", gsamp,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
+
+files <- rbind(ffiles, gfiles)
+
+meta_data_aqm <- meta_data
+row.names(meta_data_aqm) <- gsub("-", ".", paste0("X", row.names(meta_data_aqm),".Me"))
+
+### EdgeR function readBismark2DGE reads all the files and collates the counts for all the sample into one data object ###
+yall <- readBismark2DGE(files, sample.names=Sample)
+
+### Check dimension and the count matrix ###
+dim(yall)
+head(yall$counts)
+
+### Save a data frame for downstream analyses ###
+yall_df<-as.data.frame(yall)
+
+### Sum up the counts of methylated and unmethylated reads to get the total read coverage at each CpG site for each sample ###
+Methylation <- gl(2, 1, ncol(yall), labels = c("Me", "Un"))
+Me <- yall$counts[ , Methylation == "Me" ]
+Un <- yall$counts[ , Methylation == "Un" ]
+Coverage <- Me + Un
+head(Coverage)
+
+#### No filtering for matrix imputation
+n=0
+keep <- rowSums(Coverage >= n) >= 0
+table(keep)
+
+### DGEList object is subsetted to retain only the filtered loci ###
+y <- yall[keep,, keep.lib.sizes=FALSE]
+
+### Normalization - set the library sizes for each sample to be the average of the total read counts for the methylated and unmethylated libraries ###
+TotalLibSize <- y$samples$lib.size[Methylation=="Me"] +
+  +                 y$samples$lib.size[Methylation=="Un"]
+y$samples$lib.size <- rep(TotalLibSize, each=2)
+y$samples
+
+### Compute the corresponding methylation summary from the methylated and unmethylated counts ###
+Me <- y$counts[, Methylation=="Me"]
+Un<- y$counts[, Methylation=="Un"]
+
+### Calculating a methylation proportion matrix
+prop_meth_matrix <- Me/(Me+Un)
+
+# Convert to a data frame and make column names syntactically valid
+prop_df <- as.data.frame(prop_meth_matrix)
+colnames(prop_df) <- make.names(colnames(prop_df))
+
+# Filter for CpGs of interest
+prop_df$cpg <- row.names(prop_df)
+
+prop_filt_df <- dplyr::filter(prop_df, cpg %in% as.character(cpg_list$cpg))
+
+# Filter df for samples
+library(reshape2)
+prop_filt_df$cpg_id <- row.names(prop_filt_df)
+
+prop_filt_long <- melt(
+  prop_filt_df[,-41],
+  id = c("cpg_id"))
+
+# Add metadata to long df
+prop_filt_long$variable <- gsub("*.Me", "", prop_filt_long$variable)
+prop_filt_long$variable <- gsub("X*", "", prop_filt_long$variable)
+prop_filt_long$variable <- gsub("\\.", "-", prop_filt_long$variable)
+
+meta_data$variable <- row.names(meta_data)
+prop_filt_long <- merge(prop_filt_long, meta_data, by = "variable")
+
+# Add geneid info
+prop_filt_long <- merge(prop_filt_long,
+                        cpg_list, 
+                        by.x = "cpg_id",
+                        by.y = "cpg")
+
+# Fix terms
+prop_filt_long$tissue <- ifelse(prop_filt_long$tissue == "G", "Gill", "Foot")
+
+# Plot new figure
+figs11 <- ggplot(data = prop_filt_long,
+               aes(x = transplant_site, y = value, 
+                   group = cpg_id)) +
+  geom_jitter(width = 0.025, height = 0, alpha = 0.5) +
+  facet_grid(protein ~ tissue) +
+  stat_smooth(method = "glm",
+              method.args = list(family = "quasibinomial"),
+              se = FALSE) +
+  theme_classic(base_size = 20) +
+  theme(strip.background = element_blank(),
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 0.8)) +
+  scale_y_continuous(breaks = c(0.0, 0.5, 1.0)) +
+  labs(x = "Transplant environment", y = "Proportion CpG methylation")
+
+figs11
+
+# ggsave
+ggsave(figs11,
+       units = "in", width = 6, height = 12, 
+       filename = "~/Documents/GitHub/mytilus_methylation_2025/figs11.png",
+       bg = "white")
+
+```
+
