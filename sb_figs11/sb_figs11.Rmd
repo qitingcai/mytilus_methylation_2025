@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_knit$set(root.dir = '~/Documents/GitHub/mytilus_methylation_2025/')
 
 library(tidyverse)
+library(edgeR)
 
 ```
 
@@ -50,6 +51,14 @@ cpg_list$cpg <- paste(cpg_list$scaf, cpg_list$pos-1, sep = "-")
 Create prop meth df and filter for CpGs of interest
 
 ```{r}
+
+meta_data_foot <- read.delim(
+  "~/Documents/GitHub/mytilus_methylation_2025/Data/foot_coverage_files/foot_final_metadata.txt",
+  row.names = "sample", stringsAsFactors = FALSE)
+
+meta_data_gill <- read.delim(
+  "~/Documents/GitHub/mytilus_methylation_2025/Data/gill_coverage_files/gill_metadata.txt",
+  row.names = "sample", stringsAsFactors = FALSE)
 
 ### Load metadata file that include sample names, load all coverage files into R ###
 meta_data <-rbind(meta_data_foot, meta_data_gill)
@@ -139,20 +148,66 @@ prop_filt_long <- merge(prop_filt_long,
 # Fix terms
 prop_filt_long$tissue <- ifelse(prop_filt_long$tissue == "G", "Gill", "Foot")
 
-# Plot new figure
-figs11 <- ggplot(data = prop_filt_long,
-               aes(x = transplant_site, y = value, 
-                   group = cpg_id)) +
-  geom_jitter(width = 0.025, height = 0, alpha = 0.5) +
+# Create facet labels without changing the facet structure
+facet_counts <- prop_filt_long %>%
+  group_by(protein, tissue) %>%
+  summarise(n_cpg = n_distinct(cpg_id), .groups = "drop")
+
+# Create named labels for tissue facets
+tissue_labels <- facet_counts %>%
+  group_by(tissue) %>%
+  summarise(n_cpg = unique(n_cpg)[1]) %>%
+  mutate(label = paste0("CpGs = ", n_cpg))
+
+tissue_labeller <- setNames(tissue_labels$label, tissue_labels$tissue)
+
+prop_filt_long_plot <- prop_filt_long %>%
+  left_join(jitter_df, by = c("cpg_id", "transplant_site")) %>%
+  mutate(
+    # Compress x spacing between transplant groups
+    transplant_num = c(0.8, 1.2)[as.numeric(factor(transplant_site))],
+    x_jittered = transplant_num + jitter_offset
+  )
+
+# Count unique CpGs per facet panel
+facet_counts <- prop_filt_long_plot %>%
+  dplyr::group_by(protein, tissue) %>%
+  dplyr::summarise(
+    n_cpg = dplyr::n_distinct(cpg_id),
+    .groups = "drop"
+  ) %>%
+  dplyr::mutate(
+    label = paste0("n CpGs = ", n_cpg)
+  )
+
+figs11 <- ggplot(
+  data = prop_filt_long_plot,
+  aes(x = transplant_site, y = value, group = cpg_id)) +
+  geom_jitter(alpha = 0.5, width = 0.05, height = 0) +
+  geom_text(
+    data = facet_counts,
+    aes(x = -Inf, y = Inf, label = label),
+    inherit.aes = FALSE,
+    hjust = -0.15,
+    vjust = 1.2,
+    size = 5) +
   facet_grid(protein ~ tissue) +
-  stat_smooth(method = "glm",
-              method.args = list(family = "quasibinomial"),
-              se = FALSE) +
+  stat_smooth(
+    aes(x = transplant_site),
+    method = "glm",
+    method.args = list(family = "quasibinomial"),
+    se = FALSE,
+    color = scales::alpha("blue", 0.3),
+    size = 1) +
+  coord_cartesian(clip = "off") +
   theme_classic(base_size = 20) +
-  theme(strip.background = element_blank(),
-        panel.border = element_rect(color = "black", fill = NA, linewidth = 0.8)) +
-  scale_y_continuous(breaks = c(0.0, 0.5, 1.0)) +
-  labs(x = "Transplant environment", y = "Proportion CpG methylation")
+  theme(
+    strip.background = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.8)) +
+  labs(
+    x = "Transplant environment",
+    y = "Proportion CpG methylation") +
+  scale_y_continuous(breaks = c(0.0, 0.5, 1.0), lim = c(0,1.15))
 
 figs11
 
