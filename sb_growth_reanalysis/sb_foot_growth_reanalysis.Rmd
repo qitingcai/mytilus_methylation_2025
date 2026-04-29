@@ -24,6 +24,15 @@ The first thing we'll want to do is see if the association between initial shell
 # Read in shell metadata
 shell_df <- read.csv("Data/full_sample.csv")
 
+# How many mussels?
+nrow(as.data.frame(table(shell_df$sample.ID)))
+
+# Are any IDs under or overrepresented?
+table(shell_df$sample.ID)
+
+```
+
+```{r}
 # Calc linear growth rate and make one row for each mussel individual
 shell_df <- shell_df %>%
   dplyr::mutate(
@@ -93,6 +102,9 @@ ggplot(data = shell_df,
 
 # There is no need to fit a model with proportional growth bc 
 # the slope of mm growth across initial size = 0
+
+# Regression coefficients for pre- vs. post-transplant shell length
+summary(lm(`LENGTH_FINAL..mm.` ~ `LENGTH_INIT..mm.`, data = shell_df))
 
 ```
 
