@@ -1,5 +1,5 @@
 ---
-title: "sb_growth_reanalysis"
+title: "gill_growth_reanalysis"
 author: "Sam Bogan"
 date: "2026-02-26"
 output: github_document
@@ -22,17 +22,8 @@ The first thing we'll want to do is see if the association between initial shell
 ```{r}
 
 # Read in shell metadata
-shell_df <- read.csv("Data/full_sample.csv")
+shell_df <- read.csv("Data/full_sample_sbcorr.csv")
 
-# How many mussels?
-nrow(as.data.frame(table(shell_df$sample.ID)))
-
-# Are any IDs under or overrepresented?
-table(shell_df$sample.ID)
-
-```
-
-```{r}
 # Calc linear growth rate and make one row for each mussel individual
 shell_df <- shell_df %>%
   dplyr::mutate(
@@ -103,9 +94,6 @@ ggplot(data = shell_df,
 # There is no need to fit a model with proportional growth bc 
 # the slope of mm growth across initial size = 0
 
-# Regression coefficients for pre- vs. post-transplant shell length
-summary(lm(`LENGTH_FINAL..mm.` ~ `LENGTH_INIT..mm.`, data = shell_df))
-
 ```
 
 Runs of Tina's DM code with the three models above (one old; two new)
@@ -131,18 +119,18 @@ library(tidyverse)
 
 ```
 
-## Start with foot
+## Start with gill
 
 ```{r}
 
 ### Load metadata file that include sample names, load all coverage files into R ###
-setwd("Data/foot_coverage_files/")
-meta_data_foot<-read.delim("foot_final_metadata.txt", row.names = "sample", stringsAsFactors = FALSE)
-Sample_foot <- row.names(meta_data_foot)
-files_foot <- paste0("foot_samples/", Sample_foot,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
+setwd("Data/gill_coverage_files/")
+meta_data_gill<-read.delim("gill_metadata.txt", row.names = "sample", stringsAsFactors = FALSE)
+Sample_gill <- row.names(meta_data_gill)
+files_gill <- paste0("gill_samples/", Sample_gill,".CpG_report.merged_CpG_evidence.cov.CpG_report.merged_CpG_evidence.cov")
 
 ### EdgeR function readBismark2DGE reads all the files and collates the counts for all the sample into one data object ###
-yall <- readBismark2DGE(files_foot, sample.names=Sample_foot)
+yall <- readBismark2DGE(files_gill, sample.names=Sample_gill)
 
 ### Check dimension and the count matrix ###
 dim(yall)
@@ -165,49 +153,49 @@ head(Coverage)
 
 ### Filtering to only include samples with a coverage of at least 3, for 66% of samples, total of 14 samples ###
 n=3
-keep_foot <- rowSums(Coverage >= n) >= 14
-table(keep_foot)
+keep_gill <- rowSums(Coverage >= n) >= 14
+table(keep_gill)
 
 ### DGEList object is subsetted to retain only the filtered loci ###
-y_foot <- yall[keep_foot,, keep.lib.sizes=FALSE]
+y_gill <- yall[keep_gill,, keep.lib.sizes=FALSE]
 
 ### Normalization - set the library sizes for each sample to be the average of the total read counts for the methylated and unmethylated libraries ###
-TotalLibSize <- y_foot$samples$lib.size[Methylation=="Me"] +
-  +                 y_foot$samples$lib.size[Methylation=="Un"]
-y_foot$samples$lib.size <- rep(TotalLibSize, each=2)
-y_foot$samples
+TotalLibSize <- y_gill$samples$lib.size[Methylation=="Me"] +
+  +                 y_gill$samples$lib.size[Methylation=="Un"]
+y_gill$samples$lib.size <- rep(TotalLibSize, each=2)
+y_gill$samples
 
 ### Compute the corresponding methylation summary from the methylated and unmethylated counts ###
-Me_foot <- y_foot$counts[, Methylation=="Me"]
-Un_foot <- y_foot$counts[, Methylation=="Un"]
+Me_gill <- y_gill$counts[, Methylation=="Me"]
+Un_gill <- y_gill$counts[, Methylation=="Un"]
 
 ### Calculating postfiltered genome-wide coverage 
-# Coverage_postfilter<-Un_foot + Me_foot
+# Coverage_postfilter<-Un_gill + Me_gill
 # Coverage_postfilter[Coverage_postfilter == 0] <- NA
 # mean_coverage_postfilter <- colMeans(Coverage_postfilter, na.rm = TRUE)
 # mean_coverage_postfilter 
 
 ### Calculating a methylation proportion matrix
-prop_meth_matrix_foot <- Me_foot/(Me_foot+Un_foot)
-#Postfiltered total # of CpGs: colSums(!is.na(prop_meth_matrix_foot))
+prop_meth_matrix_gill <- Me_gill/(Me_gill+Un_gill)
+#Postfiltered total # of CpGs: colSums(!is.na(prop_meth_matrix_gill))
 
 # ### Calculating average genome wide methylation percentage postfiltering
-# colMeans(prop_meth_matrix_foot,na.rm=TRUE)*100
+# colMeans(prop_meth_matrix_gill,na.rm=TRUE)*100
 
 ```
 
-## Define original and alternative foot models
+## Define original and alternative gill models
 
 ```{r}
 
 ### We want to use the exposed site as reference level for both transplant and origin site effect analyses, need to relevel for transplant site effect ###
-meta_data_foot$transplant_site <- relevel(factor(meta_data_foot$transplant_site), ref = "exposed")
-meta_data_foot$origin_site <- relevel(factor(meta_data_foot$origin_site), ref = "exposed")
+meta_data_gill$transplant_site <- relevel(factor(meta_data_gill$transplant_site), ref = "exposed")
+meta_data_gill$origin_site <- relevel(factor(meta_data_gill$origin_site), ref = "exposed")
 
 ### Create a design matrix, using origin site, transplant site, and final shell length as fixed effects ###
-designSL_foot <- model.matrix(~0 + origin_site + transplant_site +
+designSL_gill <- model.matrix(~0 + origin_site + transplant_site +
                            LENGTH_INIT..mm., 
-                           data=meta_data_foot)
+                           data=meta_data_gill)
 
 # Initial
 
@@ -215,9 +203,7 @@ designSL_foot <- model.matrix(~0 + origin_site + transplant_site +
 # Initial plus growth rate
 
 # Merge with growth rate metadata
-filter(meta_data_foot, !meth %in% shell_df$sample.ID)
-
-growth_data_foot <- merge(meta_data_foot,
+growth_data_gill <- merge(meta_data_gill,
                           data.frame(
                             meth = shell_df$sample.ID,
                             g_rate = shell_df$mm_per_d,
@@ -225,96 +211,96 @@ growth_data_foot <- merge(meta_data_foot,
                             orig_final = shell_df$LENGTH_FINAL..mm.),
                           by = "meth")
 
-designSL_foot_v2 <- model.matrix(~0 + origin_site + transplant_site +
+designSL_gill_v2 <- model.matrix(~0 + origin_site + transplant_site +
                            LENGTH_INIT..mm. + g_rate, 
-                           data = growth_data_foot)
+                           data = growth_data_gill)
 
 # Just growth rate
-designSL_foot_v3 <- model.matrix(~0 + origin_site + transplant_site +
+designSL_gill_v3 <- model.matrix(~0 + origin_site + transplant_site +
                            g_rate, 
-                           data = growth_data_foot)
+                           data = growth_data_gill)
 
 ### Expand to the full design matrix modeling the sample and methylation effects ###
-design_foot <- modelMatrixMeth(designSL_foot)
-design_footv2 <- modelMatrixMeth(designSL_foot_v2)
-design_footv3 <- modelMatrixMeth(designSL_foot_v3)
+design_gill <- modelMatrixMeth(designSL_gill)
+design_gillv2 <- modelMatrixMeth(designSL_gill_v2)
+design_gillv3 <- modelMatrixMeth(designSL_gill_v3)
 
 ### Dispersion estimation ###
-y_foot1 <- estimateDisp(y_foot, design = design_foot, robust = TRUE)
-y_foot2 <- estimateDisp(y_foot, design = design_footv2, robust = TRUE)
-y_foot3 <- estimateDisp(y_foot, design = design_footv3, robust = TRUE)
+y_gill <- estimateDisp(y_gill, design = design_gill, robust = TRUE)
+y_gill2 <- estimateDisp(y_gill, design = design_gillv2, robust = TRUE)
+y_gil3 <- estimateDisp(y_gill, design = design_gillv3, robust = TRUE)
 
 ### Create the BCV plot for visualization ### 
-plotBCV(y_foot1)
-plotBCV(y_foot2)
-plotBCV(y_foot3)
+plotBCV(y_gill)
+plotBCV(y_gill2)
+plotBCV(y_gil3)
 
 ### Testing for differentially methylated CpG loci ###
 
 ### fit NB GLMs for all the CpG loci using the glmFit function in edgeR ###
-fit_foot <- glmFit(y_foot1, design_foot)
-fit_foot2 <- glmFit(y_foot2, design_footv2)
-fit_foot3 <- glmFit(y_foot3, design_footv3)
+fit_gill <- glmFit(y_gill, design_gill)
+fit_gill2 <- glmFit(y_gill2, design_gillv2)
+fit_gill3 <- glmFit(y_gil3, design_gillv3)
 
 ### Testing for differentially methylated CpG sites between different treatment groups using likelihood ratio tests ###
 
 ### Origin site effects ###
-contr_origin_foot <- makeContrasts(Origin = origin_siteprotected-origin_siteexposed, levels = design_foot)
-contr_origin_foot2 <- makeContrasts(Origin = origin_siteprotected-origin_siteexposed, levels = design_footv2)
-contr_origin_foot3 <- makeContrasts(Origin = origin_siteprotected-origin_siteexposed, levels = design_footv3)
+contr_origin_gill <- makeContrasts(Origin = origin_siteprotected-origin_siteexposed, levels = design_gill)
+contr_origin_gill2 <- makeContrasts(Origin = origin_siteprotected-origin_siteexposed, levels = design_gillv2)
+contr_origin_gill3 <- makeContrasts(Origin = origin_siteprotected-origin_siteexposed, levels = design_gillv3)
 
-lrt_origin_foot <- glmLRT(fit_foot, contrast=contr_origin_foot)
-lrt_origin_foot2 <- glmLRT(fit_foot2, contrast=contr_origin_foot2)
-lrt_origin_foot3 <- glmLRT(fit_foot3, contrast=contr_origin_foot3)
+lrt_origin_gill <- glmLRT(fit_gill, contrast=contr_origin_gill)
+lrt_origin_gill2 <- glmLRT(fit_gill2, contrast=contr_origin_gill2)
+lrt_origin_gill3 <- glmLRT(fit_gill3, contrast=contr_origin_gill3)
 
-summary(decideTests(lrt_origin_foot))
-summary(decideTests(lrt_origin_foot2))
-summary(decideTests(lrt_origin_foot3))
+summary(decideTests(lrt_origin_gill))
+summary(decideTests(lrt_origin_gill2))
+summary(decideTests(lrt_origin_gill3))
 
 ### Transplant site effects (exposed is the reference level) ###
-contr_trans_foot <- makeContrasts(Transplant = transplant_siteprotected, levels = design_foot)
-contr_trans_foot2 <- makeContrasts(Transplant = transplant_siteprotected, levels = design_footv2)
-contr_trans_foot3 <- makeContrasts(Transplant = transplant_siteprotected, levels = design_footv3)
+contr_trans_gill <- makeContrasts(Transplant = transplant_siteprotected, levels = design_gill)
+contr_trans_gill2 <- makeContrasts(Transplant = transplant_siteprotected, levels = design_gillv2)
+contr_trans_gill3 <- makeContrasts(Transplant = transplant_siteprotected, levels = design_gillv3)
 
-lrt_trans_foot <- glmLRT(fit_foot, contrast=contr_trans_foot)
-lrt_trans_foot2 <- glmLRT(fit_foot2, contrast=contr_trans_foot2)
-lrt_trans_foot3 <- glmLRT(fit_foot3, contrast=contr_trans_foot3)
+lrt_trans_gill <- glmLRT(fit_gill, contrast=contr_trans_gill)
+lrt_trans_gill2 <- glmLRT(fit_gill2, contrast=contr_trans_gill2)
+lrt_trans_gill3 <- glmLRT(fit_gill3, contrast=contr_trans_gill3)
 
-summary(decideTests(lrt_trans_foot))
-summary(decideTests(lrt_trans_foot2))
-summary(decideTests(lrt_trans_foot3))
+summary(decideTests(lrt_trans_gill))
+summary(decideTests(lrt_trans_gill2))
+summary(decideTests(lrt_trans_gill3))
 
 ### Length effect ###
-contr_length_foot <- makeContrasts(Length = LENGTH_INIT..mm., levels = design_foot)
+contr_length_gill <- makeContrasts(Length = LENGTH_INIT..mm., levels = design_gill)
 
-contr_length_foot2 <- makeContrasts(Length = LENGTH_INIT..mm., levels = design_footv2)
-contr_grate_foot2 <- makeContrasts(grate = g_rate, levels = design_footv2)
+contr_length_gill2 <- makeContrasts(Length = LENGTH_INIT..mm., levels = design_gillv2)
+contr_grate_gill2 <- makeContrasts(grate = g_rate, levels = design_gillv2)
 
-contr_grate_foot3 <- makeContrasts(grate = g_rate, levels = design_footv3)
+contr_grate_gill3 <- makeContrasts(grate = g_rate, levels = design_gillv3)
 
-lrt_length_foot <- glmLRT(fit_foot, contrast=contr_length_foot)
+lrt_length_gill <- glmLRT(fit_gill, contrast=contr_length_gill)
 
-lrt_length_foot2 <- glmLRT(fit_foot2, contrast=contr_length_foot2)
-lrt_grate_foot2 <- glmLRT(fit_foot2, contrast=contr_grate_foot2)
+lrt_length_gill2 <- glmLRT(fit_gill2, contrast=contr_length_gill2)
+lrt_grate_gill2 <- glmLRT(fit_gill2, contrast=contr_grate_gill2)
 
-lrt_grate_foot3 <- glmLRT(fit_foot3, contrast=contr_grate_foot3)
+lrt_grate_gill3 <- glmLRT(fit_gill3, contrast=contr_grate_gill3)
 
 ### Wrangle data for generating volano plot of CpG DM ###
 ### Correct p-values using BH method ###
-lrt_origin_foot$table$FDR <- p.adjust(lrt_origin_foot$table$PValue, method = "BH")
-lrt_origin_foot2$table$FDR <- p.adjust(lrt_origin_foot2$table$PValue, method = "BH")
-lrt_origin_foot3$table$FDR <- p.adjust(lrt_origin_foot3$table$PValue, method = "BH")
+lrt_origin_gill$table$FDR <- p.adjust(lrt_origin_gill$table$PValue, method = "BH")
+lrt_origin_gill2$table$FDR <- p.adjust(lrt_origin_gill2$table$PValue, method = "BH")
+lrt_origin_gill3$table$FDR <- p.adjust(lrt_origin_gill3$table$PValue, method = "BH")
 
-lrt_trans_foot$table$FDR <- p.adjust(lrt_trans_foot$table$PValue, method = "BH")
-lrt_trans_foot2$table$FDR <- p.adjust(lrt_trans_foot2$table$PValue, method = "BH")
-lrt_trans_foot3$table$FDR <- p.adjust(lrt_trans_foot3$table$PValue, method = "BH")
+lrt_trans_gill$table$FDR <- p.adjust(lrt_trans_gill$table$PValue, method = "BH")
+lrt_trans_gill2$table$FDR <- p.adjust(lrt_trans_gill2$table$PValue, method = "BH")
+lrt_trans_gill3$table$FDR <- p.adjust(lrt_trans_gill3$table$PValue, method = "BH")
 
-lrt_length_foot$table$FDR <- p.adjust(lrt_length_foot$table$PValue, method = "BH")
+lrt_length_gill$table$FDR <- p.adjust(lrt_length_gill$table$PValue, method = "BH")
 
-lrt_length_foot2$table$FDR <- p.adjust(lrt_length_foot2$table$PValue, method = "BH")
-lrt_grate_foot2$table$FDR <- p.adjust(lrt_grate_foot2$table$PValue, method = "BH")
+lrt_length_gill2$table$FDR <- p.adjust(lrt_length_gill2$table$PValue, method = "BH")
+lrt_grate_gill2$table$FDR <- p.adjust(lrt_grate_gill2$table$PValue, method = "BH")
 
-lrt_grate_foot3$table$FDR <- p.adjust(lrt_grate_foot3$table$PValue, method = "BH")
+lrt_grate_gill3$table$FDR <- p.adjust(lrt_grate_gill3$table$PValue, method = "BH")
 
 ```
 
@@ -325,35 +311,35 @@ lrt_grate_foot3$table$FDR <- p.adjust(lrt_grate_foot3$table$PValue, method = "BH
 # If growth rate is a useful additional parameter, more DM CpGs should associate with growth in v3 length than len in v1
 # If addition of growth reveals length DM, # of len DM CpGs should increase
 # Init len only
-summary(decideTests(lrt_length_foot))
-86+89
+summary(decideTests(lrt_length_gill))
+98+60
 
 # Full len DM CpGs
-summary(decideTests(lrt_length_foot2))
-52+30 # 54% reduction in DM
+summary(decideTests(lrt_length_gill2))
+38+61 # 33% reduction in DM
 
 # V2
-summary(decideTests(lrt_grate_foot2))
-52+30+47+49 # Expected increase in total DM compared to length alone
+summary(decideTests(lrt_grate_gill2))
+50+63+38+61 # Expected increase in total DM compared to length alone
 
-summary(decideTests(lrt_grate_foot3))
-31+38 # 69...  fewer than 175
+summary(decideTests(lrt_grate_gill3))
+79+61 # 140...  fewer than 158
 
 # How many of these CpGs are similar? Probably very few
 table(
   row.names(
   filter(
-    as.data.frame(decideTests(lrt_grate_foot3)), `1*g_rate` %in% c(1,-1)
+    as.data.frame(decideTests(lrt_grate_gill3)), `1*g_rate` %in% c(1,-1)
     )
   ) %in% row.names(
   filter(
-    as.data.frame(decideTests(lrt_length_foot)), `1*LENGTH_INIT..mm.` %in% c(1,-1)
+    as.data.frame(decideTests(lrt_length_gill)), `1*LENGTH_INIT..mm.` %in% c(1,-1)
     )
   )
 )
 
 # How much overlap? 31%... fairly high
-54/(54+15)
+41/(91+41)
 
 ```
 
@@ -365,25 +351,25 @@ library(MASS)
 
 ## Initial length vs length + growth
 
-# Identify 175 significant DM CpGs from foot transplant effect (model v1)
-top175_ids <- rownames(
-  lrt_trans_foot$table[order(lrt_trans_foot$table$PValue), ][1:175, ]
+# Identify 158 significant DM CpGs from gill transplant effect (model v1)
+top158_ids <- rownames(
+  lrt_trans_gill$table[order(lrt_trans_gill$table$PValue), ][1:158, ]
 )
 
 # Subset to top 10 CpGs
-Me_top  <- Me_foot[top175_ids, ]
-Un_top  <- Un_foot[top175_ids, ]
+Me_top  <- Me_gill[top158_ids, ]
+Un_top  <- Un_gill[top158_ids, ]
 Cov_top <- Me_top + Un_top
 
 # Calc model AIC
-aic_results <- sapply(1:length(top175_ids), function(i) {
+aic_results <- sapply(1:length(top158_ids), function(i) {
   
   df <- data.frame(
     Me = as.numeric(Me_top[i, ]),
     Cov = as.numeric(Cov_top[i, ]),
-    origin_site = meta_data_foot$origin_site,
-    transplant_site = meta_data_foot$transplant_site,
-    LENGTH_INIT = meta_data_foot$LENGTH_INIT..mm.
+    origin_site = meta_data_gill$origin_site,
+    transplant_site = meta_data_gill$transplant_site,
+    LENGTH_INIT = meta_data_gill$LENGTH_INIT..mm.
   )
   
   # Remove 0 cov rows
@@ -398,19 +384,19 @@ aic_results <- sapply(1:length(top175_ids), function(i) {
   AIC(fit)
 })
 
-names(aic_results) <- top175_ids
+names(aic_results) <- top158_ids
 aic_results <- as.data.frame(aic_results)
 
 # V2 AIC results
-aic_results2 <- sapply(1:length(top175_ids), function(i) {
+aic_results2 <- sapply(1:length(top158_ids), function(i) {
   
   df <- data.frame(
     Me = as.numeric(Me_top[i, ]),
     Cov = as.numeric(Cov_top[i, ]),
-    origin_site = meta_data_foot$origin_site,
-    transplant_site = meta_data_foot$transplant_site,
-    LENGTH_INIT = meta_data_foot$LENGTH_INIT..mm.,
-    g_rate = growth_data_foot$g_rate
+    origin_site = meta_data_gill$origin_site,
+    transplant_site = meta_data_gill$transplant_site,
+    LENGTH_INIT = meta_data_gill$LENGTH_INIT..mm.,
+    g_rate = growth_data_gill$g_rate
   )
   
   # Remove zero coverage rows
@@ -441,45 +427,35 @@ ggplot(data = aic_comp,
   theme_classic() +
   labs(x = "AIC(len) - AIC(len + growth)", y = "Count (CpG models)")
 
-# Identify 10 most-significant DM CpGs from foot transplant v1
-top175_ids <- rownames(
-  lrt_trans_foot$table[order(lrt_trans_foot$table$PValue), ][1:175, ]
+# Identify 10 most-significant DM CpGs from gill transplant v1
+top158_ids <- rownames(
+  lrt_trans_gill$table[order(lrt_trans_gill$table$PValue), ][1:158, ]
 )
 
 
 
 ## Initial growth rate vs. growth
 
-# V3 AIC results 
-# Some models cannot estimate parameters do to colienarity issues. 
-# Use trycatch so this doesn't interupt loop.
-aic_results3 <- sapply(1:length(top175_ids), function(i) {
+# V3 AIC results
+aic_results3 <- sapply(1:length(top158_ids), function(i) {
   
   df <- data.frame(
     Me = as.numeric(Me_top[i, ]),
     Cov = as.numeric(Cov_top[i, ]),
-    origin_site = meta_data_foot$origin_site,
-    transplant_site = meta_data_foot$transplant_site,
-    LENGTH_INIT = meta_data_foot$LENGTH_INIT..mm.,
-    g_rate = growth_data_foot$g_rate
+    origin_site = meta_data_gill$origin_site,
+    transplant_site = meta_data_gill$transplant_site,
+    LENGTH_INIT = meta_data_gill$LENGTH_INIT..mm.,
+    g_rate = growth_data_gill$g_rate
   )
   
   # Remove zero coverage rows
   df <- df[df$Cov > 0, ]
   
-  # Skip if too few observations
-  if(nrow(df) < 5) return(NA)
-  
-  fit <- tryCatch(
-    glm.nb(
-      Me ~ 0 + origin_site + transplant_site + g_rate +
-        offset(log(Cov)),
-      data = df
-    ),
-    error = function(e) return(NULL)
+  fit <- glm.nb(
+    Me ~ 0 + origin_site + transplant_site + g_rate +
+      offset(log(Cov)),
+    data = df
   )
-  
-  if(is.null(fit)) return(NA)
   
   AIC(fit)
 })

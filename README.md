@@ -38,7 +38,13 @@ Code repository for mussel DNA methylation project
 │   │   ├── final_gill_DM_analysis.rmd
 │   │   ├── interaction_model_foot.rmd
 │   │   ├── interaction_model_gill.rmd
-│   │   └── model_correlation.rmd
+│   │   ├── model_correlation.rmd
+│   │   ├── growth_reanalysis
+│   |   │   ├── Model selection for shell size covariate (foot_growth_reanalysis.Rmd and gill_growth_reanalysis.Rmd)
+│   |   │   ├── Markdown summaries of model selection (foot_growth_reanalysis.md and gill_growth_reanalysis.md)
+│   |   │   ├── Subdirectories with outputs of markdowns (foot_growth_reanalysis_files/ and gill_growth_reanalysis_files/)
+│   │   ├── figs11
+│   |   │   ├── R code for plotting Figure S11 (fis11.Rmd)
 │   ├── Data 
 │   │   ├── foot_coverage_files (n=20 + foot_final_metadata.txt)
 │   │   ├── gill_coverage_files (n=20 + gill_metadata.txt)
@@ -50,7 +56,8 @@ Code repository for mussel DNA methylation project
 |   │   ├── multiqc_outputs (trimmed + pretrimmed reports)
 |   │   ├── lfg_files
 |   │   ├── imp_scores_pca_merged_40samples.csv
-│   └── └── bismark_output.csv
+│   │   ├── bismark_output.csv
+
 │   
 └── README.MD
 

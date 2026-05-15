@@ -215,7 +215,7 @@ figs11
 # ggsave
 ggsave(figs11,
        units = "in", width = 6, height = 12, 
-       filename = "~/Documents/GitHub/mytilus_methylation_2025/sb_figS11/figs11.png",
+       filename = "~/Documents/GitHub/mytilus_methylation_2025/figS11/figs11.png",
        bg = "white")
 
 ```
