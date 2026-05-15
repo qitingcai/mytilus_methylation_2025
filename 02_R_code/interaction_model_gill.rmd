@@ -308,7 +308,7 @@ print(gill_volcano + plot_layout(heights = c(1, 1, 1)))  # ensure equal height p
 
 ```{r}
 
-### making combined tissue volcano plots for effects without length
+### making combined tissue volcano plots for effects including interaction Figure S9####
 
 foot_volcano_labeled <- foot_volcano + plot_annotation(title = "A. Foot",
                                                        theme = theme(plot.title = element_text(face= "bold", size = 30)))
