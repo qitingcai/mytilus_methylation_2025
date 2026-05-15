@@ -46,7 +46,7 @@ Code repository for mussel DNA methylation project
 │   │   ├── figs11
 │   |   │   ├── R code for plotting Figure S11 (fis11.Rmd)
 │   ├── Data 
-│   │   ├── foot_coverage_files (n=20 + foot_final_metadata.txt)
+│   │   ├── foot_coverage_files (n=20 + foot_final_metadata.txt, meth_group_matrix.csv)
 │   │   ├── gill_coverage_files (n=20 + gill_metadata.txt)
 │   │   ├── GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf
 │   │   ├── new_genomic_intron.gff
