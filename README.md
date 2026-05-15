@@ -45,7 +45,7 @@ Code repository for mussel DNA methylation project
 │   |   │   ├── Subdirectories with outputs of markdowns (foot_growth_reanalysis_files/ and gill_growth_reanalysis_files/)
 │   │   ├── figs11
 │   |   │   ├── R code for plotting Figure S11 (fis11.Rmd)
-│   ├── Data_R 
+│   ├── Data 
 │   │   ├── foot_coverage_files (n=20 + foot_final_metadata.txt)
 │   │   ├── gill_coverage_files (n=20 + gill_metadata.txt)
 │   │   ├── GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf
