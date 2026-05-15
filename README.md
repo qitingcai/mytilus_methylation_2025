@@ -45,16 +45,16 @@ Code repository for mussel DNA methylation project
 │   |   │   ├── Subdirectories with outputs of markdowns (foot_growth_reanalysis_files/ and gill_growth_reanalysis_files/)
 │   │   ├── figs11
 │   |   │   ├── R code for plotting Figure S11 (fis11.Rmd)
-│   ├── Data 
+│   ├── Data_R 
 │   │   ├── foot_coverage_files (n=20 + foot_final_metadata.txt)
 │   │   ├── gill_coverage_files (n=20 + gill_metadata.txt)
 │   │   ├── GCF_021869535.1_xbMytCali1.0.p_gene_ontology.gaf
 │   │   ├── new_genomic_intron.gff
-│   │   ├── R input files (.csv)
+│   │   ├── R input files and output results (.csv)
 │   ├── Outputs
 |   │   ├── Mbias_output (mbias_report.html)
 |   │   ├── multiqc_outputs (trimmed + pretrimmed reports)
-|   │   ├── lfg_files
+|   │   ├── lfg_files (GO analyses)
 |   │   ├── imp_scores_pca_merged_40samples.csv
 │   │   ├── bismark_output.csv
 
