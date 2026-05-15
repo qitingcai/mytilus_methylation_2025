@@ -2,8 +2,22 @@
 
 ```{r}
 ### Set working directory, include all (top5 for each treatments) foot coverage files ###
+
+library(vegan)
+library(edgeR)
 library(tidyverse)
+library(SYNCSA)
+library(mice)
+library(ape)
+library(rtracklayer)
+library(genomation)
+library(plyranges)
+library(GenomicRanges)
+library(lme4)
+library(emmeans)
 library(ggthemes)
+library(rstatix)
+library(coin)
 
 setwd("/Users/qcai/mytilus_github/Data/foot_coverage_files")
 
