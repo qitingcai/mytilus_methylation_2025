@@ -1,5 +1,5 @@
 # mytilus_methylation_2025
-Code repository for mussel DNA methylation project
+Code repository for mussel DNA methylation project: Tissue-specific plasticity of DNA methylation across intertidal microhabitats in juvenile mussels (*Mytilus californianus*)
 
 **01_RRBS_Bismark_Pipeline**: this folder includes scripts used to preprocess raw RRBS reads and generate CpG methylation calls via the Bismark pipeline
 1. Preprocess_00 (quality assessment, trimming, concatenating lanes, intron annotation on gff file)
